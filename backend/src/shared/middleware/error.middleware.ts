@@ -1,7 +1,10 @@
-import { Request, Response, NextFunction } from 'express';
+import { NextFunction, Request, Response } from 'express';
+
 import { ZodError } from 'zod';
+
 import { AppError } from '../errors/AppError';
 import { logger } from '../utils/logger';
+import ResponseFormatter from '../utils/response';
 
 export const errorHandler = (
   err: Error,
@@ -10,39 +13,31 @@ export const errorHandler = (
   _next: NextFunction
 ): void => {
   if (err instanceof AppError) {
-    res.status(err.statusCode).json({
-      success: false,
-      message: err.message,
-    });
+    ResponseFormatter.error(res, err.message, err.statusCode);
     return;
   }
 
   if (err instanceof ZodError) {
-    res.status(400).json({
-      success: false,
-      message: 'Validation failed',
-      errors: err.errors.map((e) => ({ field: e.path.join('.'), message: e.message })),
-    });
+    ResponseFormatter.sendError(
+      res,
+      'Validation failed',
+      400,
+      err.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')
+    );
     return;
   }
 
   // Mongoose duplicate key
-  if ((err as any).code === 11000) {
-    const field = Object.keys((err as any).keyValue || {})[0];
-    res.status(409).json({
-      success: false,
-      message: `${field} already exists`,
-    });
+  if ((err as { code?: number }).code === 11000) {
+    const field = Object.keys((err as { keyValue?: Record<string, unknown> }).keyValue || {})[0];
+    ResponseFormatter.sendError(res, `${field} already exists`, 409);
     return;
   }
 
   logger.error(err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-  });
+  ResponseFormatter.sendError(res, 'Internal server error', 500);
 };
 
 export const notFound = (_req: Request, res: Response): void => {
-  res.status(404).json({ success: false, message: 'Route not found' });
+  ResponseFormatter.sendError(res, 'Route not found', 404);
 };

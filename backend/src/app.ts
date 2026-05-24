@@ -1,27 +1,28 @@
 import express from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import { config } from './config/env';
-import { errorHandler, notFound } from './shared/middleware/error.middleware';
 
-// Routes
-import authRoutes from './modules/auth/auth.routes';
-import eventRoutes from './modules/events/event.routes';
-import bookingRoutes from './modules/bookings/booking.routes';
-import adminRoutes from './modules/admin/admin.routes';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+
+import adminRoutes from './modules/admin/routes/admin.routes';
+import authRoutes from './modules/auth/routes/auth.routes';
+import bookingRoutes from './modules/bookings/routes/booking.routes';
+import eventRoutes from './modules/events/routes/event.routes';
+import { config } from './shared/config/env';
+import { errorHandler, notFound } from './shared/middleware/error.middleware';
 
 const app = express();
 
 // Security
 app.use(helmet());
-app.use(cors({
+const corsOptions = {
   origin: config.clientUrl,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-}));
+};
+app.use(cors(corsOptions));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -48,7 +49,19 @@ if (config.nodeEnv !== 'test') app.use(morgan('dev'));
 
 // Health check
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), env: config.nodeEnv });
+  res.json({
+    status: 'ok',
+    routes: {
+      api: {
+        auth: '/api/auth',
+        events: '/api/events',
+        bookings: '/api/bookings',
+        admin: '/api/admin',
+      },
+    },
+    timestamp: new Date().toISOString(),
+    env: config.nodeEnv,
+  });
 });
 
 // API Routes

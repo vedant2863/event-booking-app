@@ -26,8 +26,8 @@ eventbooking/
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/eventbooking.git
-cd eventbooking
+git clone https://github.com/vedant2863/event-booking-app.git
+cd event-booking-app
 
 # Install backend deps
 cd backend && npm install && cd ..

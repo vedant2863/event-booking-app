@@ -1,8 +1,10 @@
-import { Response, NextFunction } from 'express';
+import { NextFunction, Response } from 'express';
+
 import jwt from 'jsonwebtoken';
-import { config } from '../../config/env';
+
+import { config } from '../config/env';
+import { ForbiddenError, UnauthorizedError } from '../errors/AppError';
 import { AuthenticatedRequest, AuthPayload, UserRole } from '../types';
-import { UnauthorizedError, ForbiddenError } from '../errors/AppError';
 
 export const authenticate = (
   req: AuthenticatedRequest,

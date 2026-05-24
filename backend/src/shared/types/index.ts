@@ -53,6 +53,8 @@ export interface ApiResponse<T = unknown> {
   message: string;
   data?: T;
   error?: string;
+  statusCode: number;
+  timestamp: string;
   pagination?: {
     page: number;
     limit: number;

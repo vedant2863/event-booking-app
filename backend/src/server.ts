@@ -1,14 +1,15 @@
 import http from 'http';
+
 import app from './app';
-import { config } from './config/env';
-import { connectDB } from './shared/database/connection';
+import { config } from './shared/config/env';
+import db from './shared/database/connection';
 import { getRedis } from './shared/database/redis';
-import { initSocketServer } from './websocket/socket';
 import { logger } from './shared/utils/logger';
+import { initSocketServer } from './shared/websocket/socket';
 
 const start = async () => {
   // Connect to database
-  await connectDB();
+  await db.connect();
 
   // Warm up Redis connection
   getRedis();
@@ -18,9 +19,9 @@ const start = async () => {
   initSocketServer(httpServer);
 
   httpServer.listen(config.port, () => {
-    logger.info(`🚀 Server running on http://localhost:${config.port}`);
-    logger.info(`📡 WebSocket ready`);
-    logger.info(`🌍 Environment: ${config.nodeEnv}`);
+    logger.info(`Server running on http://localhost:${config.port}`);
+    logger.info(`WebSocket ready`);
+    logger.info(`Environment: ${config.nodeEnv}`);
   });
 
   // Graceful shutdown
