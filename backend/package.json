@@ -15,7 +15,6 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "postinstall": "prisma generate"
     "postinstall": "prisma generate",
     "vercel-build": "prisma generate && tsc"
   },
