@@ -5,13 +5,14 @@ dotenv.config();
 
 const envSchema = z.object({
   PORT: z.string().default('8000'),
+  DOMAIN: z.string().default('http://localhost:8000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   DATABASE_URL: z
     .string()
     .default('postgresql://postgres:postgres@localhost:5432/eventbooking?schema=public'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
-  JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
-  JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
+  JWT_SECRET: z.string().default('eventbook_super_secret_jwt_key_2025_prod_safe'),
+  JWT_REFRESH_SECRET: z.string().default('eventbook_super_secret_refresh_jwt_key_2025_prod_safe'),
   JWT_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   ACCESS_TOKEN_COOKIE_NAME: z.string().default('accessToken'),
@@ -33,6 +34,7 @@ if (!parsed.success) {
 
 export const config = {
   port: parseInt(parsed.data.PORT, 10),
+  domain: parsed.data.CLIENT_URL,
   nodeEnv: parsed.data.NODE_ENV,
   databaseUrl: parsed.data.DATABASE_URL,
   redisUrl: parsed.data.REDIS_URL,

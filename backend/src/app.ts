@@ -15,14 +15,22 @@ import { errorHandler, notFound } from './shared/middleware/error.middleware';
 
 const app = express();
 
+// Enable trust proxy for Vercel / serverless reverse proxy
+app.set('trust proxy', 1);
+
 // Security
-app.use(helmet());
-const corsOptions = {
-  origin: config.clientUrl,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-};
-app.use(cors(corsOptions));
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl) or any Vercel/localhost client
+      if (!origin) return callback(null, true);
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  })
+);
 
 // Rate limiting
 const limiter = rateLimit({
@@ -47,7 +55,7 @@ app.use(cookieParser());
 // Logging
 if (config.nodeEnv !== 'test') app.use(morgan('dev'));
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.status(200).json({
     message: 'Welcome to the Event Booking API!',
   });

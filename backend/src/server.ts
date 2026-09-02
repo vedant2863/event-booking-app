@@ -19,7 +19,9 @@ const start = async () => {
   initSocketServer(httpServer);
 
   httpServer.listen(config.port, () => {
-    logger.info(`Server running on http://localhost:${config.port}`);
+    logger.info(
+      `Server running on ${config.nodeEnv === 'production' ? `https://${config.domain}` : `http://localhost:${config.port}`}`
+    );
     logger.info(`WebSocket ready`);
     logger.info(`Environment: ${config.nodeEnv}`);
   });
