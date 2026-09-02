@@ -265,7 +265,7 @@ export const HomePage = () => {
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-[#2b3148] via-[#1a1f33] to-[#111422] p-6 sm:p-8 border border-gray-800 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
           <div className="space-y-2 text-center md:text-left">
             <div className="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 text-xs font-bold px-2.5 py-1 rounded-full uppercase">
-              <Sparkles className="w-3.5 h-3.5" /> BookMyShow Stream
+              <Sparkles className="w-3.5 h-3.5" /> EventBook Stream
             </div>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-white">
               Endless Entertainment, Anywhere, Anytime
@@ -325,7 +325,7 @@ export const HomePage = () => {
         )}
       </section>
 
-      {/* 6. Why Book On BookMyShow Assurance Strip */}
+      {/* 6. Why Book On EventBook Assurance Strip */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
         <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-6 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           <div className="flex flex-col items-center space-y-1">

@@ -55,16 +55,15 @@ export const Navbar = () => {
         <div className="flex items-center justify-between h-16 gap-4 sm:gap-8">
           {/* Logo & Search Container */}
           <div className="flex items-center gap-6 flex-1">
-            {/* BookMyShow Logo */}
+            {/* EventBook Logo */}
             <Link
               to="/"
               className="flex items-center gap-1 shrink-0 font-bold text-xl tracking-tight text-white select-none"
             >
-              <span className="font-extrabold text-2xl tracking-tighter">book</span>
+              <span className="font-extrabold text-2xl tracking-tighter">Event</span>
               <span className="bg-[#f84464] text-white px-1.5 py-0.5 rounded font-black text-sm tracking-wider uppercase">
-                my
+                Book
               </span>
-              <span className="font-extrabold text-2xl tracking-tighter">show</span>
             </Link>
 
             {/* Global Search Bar */}

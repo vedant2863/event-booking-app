@@ -46,7 +46,7 @@ export class NotificationService {
 
     const html = `
       <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
-        <h1 style="color:#f84464">🎉 BookMyShow Booking Confirmed!</h1>
+        <h1 style="color:#f84464">🎉 EventBook Booking Confirmed!</h1>
         <p>Hi <strong>${user.username}</strong>,</p>
         <p>Your booking for <strong>${event?.title || 'the event'}</strong> is confirmed.</p>
         <div style="background:#f3f4f6;padding:16px;border-radius:8px;margin:16px 0">

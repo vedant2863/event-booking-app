@@ -1,6 +1,6 @@
-# 🎭 BookMyShow Clone — Full-Stack Cinema & Event Booking Platform
+# 🎭 EventBook — Full-Stack Cinema & Event Booking Platform
 
-A production-grade **BookMyShow** web application clone built with **React 18, Node.js + Express (TypeScript), PostgreSQL + Prisma ORM, Redis, and Socket.IO**.
+A production-grade **EventBook** web application built with **React 18, Node.js + Express (TypeScript), PostgreSQL + Prisma ORM, Redis, and Socket.IO**.
 
 Featuring authentic crimson (`#f84464`) branding, global multi-city switcher, multi-cinema showtime picker, tiered auditorium seat maps (Recliner, Prime Plus, Classic) with curved glowing cinema screens, itemized billing with GST, dynamic UPI QR / Card checkout, and digital M-Tickets with scannable QR codes.
 

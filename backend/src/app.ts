@@ -47,6 +47,12 @@ app.use(cookieParser());
 // Logging
 if (config.nodeEnv !== 'test') app.use(morgan('dev'));
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    message: 'Welcome to the Event Booking API!',
+  });
+});
+
 // Health check
 app.get('/health', (_req, res) => {
   res.json({
