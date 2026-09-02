@@ -20,12 +20,20 @@ app.set('trust proxy', 1);
 
 // Security
 app.use(helmet({ crossOriginResourcePolicy: false }));
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://event-booking-frontend.vercel.app',
+];
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. mobile apps, curl) or any Vercel/localhost client
       if (!origin) return callback(null, true);
-      return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'), false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
