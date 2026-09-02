@@ -1,10 +1,9 @@
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 
-dotenv.config();
+import { prisma } from '../shared/database/prisma';
 
-const prisma = new PrismaClient();
+dotenv.config();
 
 const BOOKMYSHOW_EVENTS = [
   // --- Blockbuster Movies (Screening across all cities) ---
@@ -470,20 +469,30 @@ async function main() {
     );
   }
 
-  console.log(
-    `\n🎉 Seeded ${BOOKMYSHOW_EVENTS.length} BookMyShow events across major Indian cities with ${totalSeatsCreated} total seats into PostgreSQL!`
-  );
+  const summary = {
+    eventsCount: BOOKMYSHOW_EVENTS.length,
+    totalSeats: totalSeatsCreated,
+    message: `Seeded ${BOOKMYSHOW_EVENTS.length} BookMyShow events across major Indian cities with ${totalSeatsCreated} total seats into PostgreSQL!`,
+  };
+
+  console.log(`\n🎉 ${summary.message}`);
   console.log('\n🔑 Demo credentials:');
   console.log('   Admin:     admin@demo.com     / password123');
   console.log('   Organizer: organizer@demo.com / password123');
   console.log('   User:      user@demo.com      / password123\n');
+
+  return summary;
 }
 
-main()
-  .catch((e) => {
-    console.error('❌ Seeding error:', e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+export { main as seedDatabase };
+
+if (process.argv[1]?.includes('seed')) {
+  main()
+    .catch((e) => {
+      console.error('❌ Seeding error:', e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
