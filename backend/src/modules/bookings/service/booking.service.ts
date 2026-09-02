@@ -1,12 +1,8 @@
-import mongoose from 'mongoose';
-
+import { Seat } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
+import { prisma } from '../../../shared/database/prisma';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../../shared/errors/AppError';
-import { Booking } from '../../../shared/models/booking.model';
-import { Event } from '../../../shared/models/event.model';
-import { ISeat, Seat } from '../../../shared/models/seat.model';
-import { BookingStatus, PaymentStatus } from '../../../shared/types';
 import { getSocketServer } from '../../../shared/websocket/socket';
 import { notificationService } from '../../notifications/service/notification.service';
 import { SeatRepository } from '../../seats/repository/seat.repository';
@@ -32,21 +28,23 @@ export class BookingService {
   }
 
   async createBooking(dto: CreateBookingDto, userId: string) {
-    const event = await Event.findById(dto.eventId);
+    const event = await prisma.event.findUnique({ where: { id: dto.eventId } });
     if (!event) throw new NotFoundError('Event');
     if (event.isCancelled) throw new ValidationError('Event is cancelled');
     if (event.date < new Date()) throw new ValidationError('Event has already passed');
 
-    const seats = (await Seat.find({
-      _id: { $in: dto.seatIds },
-      eventId: dto.eventId,
-    }).exec()) as ISeat[];
+    const seats: Seat[] = await prisma.seat.findMany({
+      where: {
+        id: { in: dto.seatIds },
+        eventId: dto.eventId,
+      },
+    });
     if (seats.length !== dto.seatIds.length) throw new NotFoundError('One or more seats');
 
     await this.seatService.lockSeats(dto.seatIds, dto.eventId, userId);
 
-    const totalAmount = seats.reduce((sum, s) => sum + s.price, 0);
-    const seatDetails = seats.map((s) => ({
+    const totalAmount = seats.reduce((sum: number, s: Seat) => sum + s.price, 0);
+    const seatDetails = seats.map((s: Seat) => ({
       seatNumber: s.seatNumber,
       section: s.section,
       row: s.row,
@@ -54,59 +52,63 @@ export class BookingService {
     }));
 
     const booking = await this.bookingRepository.create({
-      userId: new mongoose.Types.ObjectId(userId),
-      eventId: new mongoose.Types.ObjectId(dto.eventId),
-      seats: dto.seatIds.map((id) => new mongoose.Types.ObjectId(id)),
+      userId,
+      eventId: dto.eventId,
+      seats: dto.seatIds,
       seatDetails,
       totalAmount,
-      bookingStatus: BookingStatus.PENDING,
-      paymentStatus: PaymentStatus.PENDING,
+      bookingStatus: 'pending',
+      paymentStatus: 'pending',
       bookingReference: `EVB-${uuidv4().split('-')[0].toUpperCase()}`,
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
     const io = getSocketServer();
     if (io) {
-      dto.seatIds.forEach((seatId) => {
+      dto.seatIds.forEach((seatId: string) => {
         io.to(`event:${dto.eventId}`).emit('seat:locked', { seatId, eventId: dto.eventId });
       });
     }
 
-    return booking;
+    return {
+      ...booking,
+      _id: booking.id,
+    };
   }
 
   async confirmPayment(bookingId: string, userId: string) {
     const booking = await this.bookingRepository.findById(bookingId);
     if (!booking) throw new NotFoundError('Booking');
-    if (booking.userId.toString() !== userId) throw new ForbiddenError();
-    if (booking.bookingStatus !== BookingStatus.PENDING)
-      throw new ValidationError('Booking is not pending');
+    if (booking.userId !== userId) throw new ForbiddenError();
+    if (booking.bookingStatus !== 'pending') throw new ValidationError('Booking is not pending');
     if (booking.expiresAt && booking.expiresAt < new Date())
       throw new ValidationError('Booking has expired');
 
-    booking.paymentStatus = PaymentStatus.COMPLETED;
-    booking.bookingStatus = BookingStatus.CONFIRMED;
-    booking.expiresAt = undefined;
-    await booking.save();
+    const updatedBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        paymentStatus: 'completed',
+        bookingStatus: 'confirmed',
+        expiresAt: null,
+      },
+    });
 
-    await this.seatService.confirmSeats(
-      booking.seats.map((s) => s.toString()),
-      booking.eventId.toString(),
-      userId,
-      bookingId
-    );
+    const seatIds = booking.seats.map((s: Seat) => s.id);
+    await this.seatService.confirmSeats(seatIds, booking.eventId, userId, bookingId);
 
-    await Event.findByIdAndUpdate(booking.eventId, {
-      $inc: { availableSeats: -booking.seats.length },
+    await prisma.event.update({
+      where: { id: booking.eventId },
+      data: {
+        availableSeats: { decrement: seatIds.length },
+      },
     });
 
     const io = getSocketServer();
     if (io) {
-      const eventIdStr = booking.eventId.toString();
-      booking.seats.forEach((seatId) => {
-        io.to(`event:${eventIdStr}`).emit('seat:booked', {
-          seatId: seatId.toString(),
-          eventId: eventIdStr,
+      seatIds.forEach((seatId: string) => {
+        io.to(`event:${booking.eventId}`).emit('seat:booked', {
+          seatId,
+          eventId: booking.eventId,
         });
       });
       io.to(`user:${userId}`).emit('booking:confirmed', {
@@ -117,44 +119,51 @@ export class BookingService {
 
     await this.notificationService.sendBookingConfirmation(bookingId, userId);
 
-    return booking;
+    return {
+      ...updatedBooking,
+      _id: updatedBooking.id,
+    };
   }
 
   async cancelBooking(bookingId: string, userId: string) {
     const booking = await this.bookingRepository.findById(bookingId);
     if (!booking) throw new NotFoundError('Booking');
-    if (booking.userId.toString() !== userId) throw new ForbiddenError();
-    if (booking.bookingStatus === BookingStatus.CANCELLED)
-      throw new ValidationError('Already cancelled');
+    if (booking.userId !== userId) throw new ForbiddenError();
+    if (booking.bookingStatus === 'cancelled') throw new ValidationError('Already cancelled');
 
-    booking.bookingStatus = BookingStatus.CANCELLED;
-    booking.paymentStatus =
-      booking.paymentStatus === PaymentStatus.COMPLETED
-        ? PaymentStatus.REFUNDED
-        : PaymentStatus.FAILED;
-    booking.cancelledAt = new Date();
-    await booking.save();
+    const updatedBooking = await prisma.booking.update({
+      where: { id: bookingId },
+      data: {
+        bookingStatus: 'cancelled',
+        paymentStatus: booking.paymentStatus === 'completed' ? 'refunded' : 'failed',
+        cancelledAt: new Date(),
+      },
+    });
 
-    await this.seatService.releaseSeats(
-      booking.seats.map((s) => s.toString()),
-      booking.eventId.toString()
-    );
+    const seatIds = booking.seats.map((s: Seat) => s.id);
+    await this.seatService.releaseSeats(seatIds, booking.eventId);
 
-    await Event.findByIdAndUpdate(booking.eventId, {
-      $inc: { availableSeats: booking.seats.length },
+    await prisma.event.update({
+      where: { id: booking.eventId },
+      data: {
+        availableSeats: { increment: seatIds.length },
+      },
     });
 
     const io = getSocketServer();
     if (io) {
-      booking.seats.forEach((seatId) => {
-        io.to(`event:${booking.eventId.toString()}`).emit('seat:released', {
-          seatId: seatId.toString(),
-          eventId: booking.eventId.toString(),
+      seatIds.forEach((seatId: string) => {
+        io.to(`event:${booking.eventId}`).emit('seat:released', {
+          seatId,
+          eventId: booking.eventId,
         });
       });
     }
 
-    return booking;
+    return {
+      ...updatedBooking,
+      _id: updatedBooking.id,
+    };
   }
 
   async getUserBookings(userId: string, page = 1, limit = 10) {
@@ -165,11 +174,33 @@ export class BookingService {
   }
 
   async getBookingById(bookingId: string, userId: string) {
-    const booking = await Booking.findById(bookingId)
-      .populate('eventId', 'title date venue banner organizer')
-      .populate('userId', 'username email');
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            venue: true,
+            banner: true,
+            organizerId: true,
+          },
+        },
+        user: {
+          select: { id: true, username: true, email: true },
+        },
+        seats: true,
+      },
+    });
     if (!booking) throw new NotFoundError('Booking');
-    if (booking.userId._id.toString() !== userId) throw new ForbiddenError();
-    return booking;
+    if (booking.userId !== userId) throw new ForbiddenError();
+
+    return {
+      ...booking,
+      _id: booking.id,
+      eventId: booking.event,
+      userId: booking.user,
+    };
   }
 }

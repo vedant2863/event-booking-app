@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Ticket, Calendar, MapPin, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Ticket, Calendar, MapPin, CheckCircle, XCircle, Clock, QrCode } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { bookingsApi } from '../api';
 import { Booking, Event } from '../../shared/types';
 import clsx from 'clsx';
 
 const STATUS_CONFIG = {
-  confirmed: { icon: CheckCircle, color: 'text-green-400', bg: 'bg-green-500/10' },
-  pending: { icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
-  cancelled: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
-  expired: { icon: XCircle, color: 'text-gray-400', bg: 'bg-gray-500/10' },
+  confirmed: {
+    icon: CheckCircle,
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10 border-emerald-500/30',
+  },
+  pending: { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+  cancelled: { icon: XCircle, color: 'text-rose-400', bg: 'bg-rose-500/10 border-rose-500/30' },
+  expired: { icon: XCircle, color: 'text-gray-400', bg: 'bg-gray-500/10 border-gray-500/30' },
 };
 
 export const BookingsPage = () => {
@@ -30,20 +34,43 @@ export const BookingsPage = () => {
   };
 
   useEffect(() => {
-    (async () => {
-      await fetchBookings();
-    })();
+    let isCancelled = false;
+    const load = async () => {
+      try {
+        const { data } = await bookingsApi.getAll();
+        if (!isCancelled) {
+          setBookings(data.data || []);
+        }
+      } catch {
+        if (!isCancelled) {
+          console.error('Failed to fetch bookings');
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+        }
+      }
+    };
+    load();
+    return () => {
+      isCancelled = true;
+    };
   }, []);
 
   const handleCancel = async (id: string) => {
-    if (!confirm('Cancel this booking?')) return;
+    if (
+      !confirm(
+        'Are you sure you want to cancel this booking? Refund will be processed back to original payment method.'
+      )
+    )
+      return;
     try {
       await bookingsApi.cancel(id);
-      toast.success('Booking cancelled');
+      toast.success('Booking cancelled successfully');
       fetchBookings();
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Failed to cancel');
+      toast.error(err.response?.data?.message || 'Failed to cancel booking');
     }
   };
 
@@ -61,42 +88,66 @@ export const BookingsPage = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10">
-      <h1 className="font-display font-bold text-3xl text-white mb-8">My Bookings</h1>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-6">
+      <div className="border-b border-gray-800 pb-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
+            Your Orders & M-Tickets
+          </h1>
+          <p className="text-xs text-gray-400 mt-0.5">Manage your movie tickets and event passes</p>
+        </div>
+        <Link
+          to="/events"
+          className="bg-[#f84464] hover:bg-[#e03050] text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+        >
+          Book More Shows
+        </Link>
+      </div>
 
       {bookings.length === 0 ? (
-        <div className="text-center py-24 text-gray-500">
-          <Ticket className="w-12 h-12 mx-auto mb-4 opacity-30" />
-          <p className="text-lg">No bookings yet.</p>
-          <Link to="/events" className="btn-primary inline-flex mt-4">
-            Browse Events
+        <div className="text-center py-20 bg-gray-900/40 rounded-3xl border border-gray-800 space-y-4">
+          <Ticket className="w-12 h-12 mx-auto text-gray-600" />
+          <h3 className="text-lg font-bold text-white">No active bookings found</h3>
+          <p className="text-xs text-gray-400 max-w-sm mx-auto">
+            You haven't booked any movies or live events yet. Discover trending shows in your city!
+          </p>
+          <Link to="/events" className="inline-block btn-primary text-xs mt-2">
+            Explore Movies & Events
           </Link>
         </div>
       ) : (
         <div className="space-y-4">
           {bookings.map((booking) => {
             const event = booking.eventId as Event | undefined;
-            const status = STATUS_CONFIG[booking.bookingStatus];
+            const status = STATUS_CONFIG[booking.bookingStatus] || STATUS_CONFIG.confirmed;
             const Icon = status.icon;
 
             return (
               <div
                 key={booking._id}
-                className="card p-6 space-y-4 hover:border-gray-700 transition-colors"
+                className="bg-gray-900 border border-gray-800 rounded-2xl p-5 hover:border-gray-700 transition-all shadow-lg space-y-4"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="bg-[#f84464] text-white text-[9px] font-black uppercase px-1.5 py-0.5 rounded">
+                        M-TICKET
+                      </span>
+                      <p className="text-xs text-gray-400 font-mono font-bold">
+                        {booking.bookingReference}
+                      </p>
+                    </div>
                     <Link
                       to={`/bookings/${booking._id}`}
-                      className="font-display font-semibold text-lg text-white hover:text-brand-400 transition-colors line-clamp-1"
+                      className="font-bold text-lg text-white hover:text-[#f84464] transition-colors line-clamp-1 block"
                     >
-                      {event?.title || 'Event'}
+                      {event?.title || 'Event Booking'}
                     </Link>
-                    <p className="text-xs text-gray-500 font-mono">{booking.bookingReference}</p>
                   </div>
+
                   <div
                     className={clsx(
-                      'flex items-center gap-1.5 badge px-3 py-1.5',
+                      'flex items-center gap-1.5 badge px-2.5 py-1 rounded-full border text-xs font-bold',
                       status.bg,
                       status.color
                     )}
@@ -106,38 +157,46 @@ export const BookingsPage = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-                  {event?.date && (
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4 text-brand-400" />
-                      {format(new Date(event.date), 'MMM d, yyyy · h:mm a')}
-                    </div>
-                  )}
-                  {event?.venue && (
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-brand-400" />
-                      {event.venue.name}, {event.venue.city}
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-300 bg-gray-950/60 p-3 rounded-xl border border-gray-800">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#f84464]" />
+                    <span>
+                      {event?.date ? format(new Date(event.date), 'EEE, d MMM yyyy') : 'Show Date'}{' '}
+                      · 08:30 PM
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#f84464]" />
+                    <span className="truncate">
+                      {event?.venue?.name || 'PVR Cinemas'}, {event?.venue?.city || 'Mumbai'}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-gray-800">
+                <div className="flex items-center justify-between pt-2 border-t border-gray-800">
                   <div>
-                    <p className="text-xs text-gray-500">
-                      {booking.seatDetails.length} seat{booking.seatDetails.length !== 1 ? 's' : ''}
+                    <p className="text-xs text-gray-400 font-medium">
+                      {booking.seatDetails?.length || 0} Seat(s):{' '}
+                      <strong className="text-white font-mono">
+                        {booking.seatDetails?.map((s) => s.seatNumber).join(', ')}
+                      </strong>
                     </p>
-                    <p className="font-semibold text-white">
-                      ₹{booking.totalAmount.toLocaleString()}
+                    <p className="font-bold text-sm text-emerald-400">
+                      ₹{booking.totalAmount.toLocaleString()} Paid
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Link to={`/bookings/${booking._id}`} className="btn-ghost text-sm py-1.5">
-                      View
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to={`/bookings/${booking._id}`}
+                      className="bg-[#f84464] hover:bg-[#e03050] text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+                    >
+                      <QrCode className="w-3.5 h-3.5" /> View M-Ticket
                     </Link>
                     {booking.bookingStatus === 'confirmed' && (
                       <button
                         onClick={() => handleCancel(booking._id)}
-                        className="text-red-400 hover:text-red-300 text-sm px-3 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
+                        className="text-rose-400 hover:text-rose-300 text-xs font-semibold px-3 py-2 rounded-lg hover:bg-rose-500/10 transition-colors"
                       >
                         Cancel
                       </button>

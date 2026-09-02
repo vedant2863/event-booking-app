@@ -1,89 +1,157 @@
-import { Booking, IBooking } from '../../../shared/models/booking.model';
-import { Event, IEvent } from '../../../shared/models/event.model';
-import { IUser, User } from '../../../shared/models/user.model';
+import { Prisma } from '@prisma/client';
 
-import { BaseRepository } from './BaseRepository';
+import { prisma } from '../../../shared/database/prisma';
 
-export class AdminRepository extends BaseRepository {
-  async getDashboardStats(): Promise<{
-    totalUsers: number;
-    totalEvents: number;
-    totalBookings: number;
-    totalRevenue: number;
-    recentBookings: IBooking[];
-  }> {
+type UserSelectResult = Prisma.UserGetPayload<{
+  select: {
+    id: true;
+    username: true;
+    email: true;
+    role: true;
+    profileImage: true;
+    isVerified: true;
+    createdAt: true;
+    updatedAt: true;
+  };
+}>;
+
+type RecentBookingPayload = Prisma.BookingGetPayload<{
+  include: {
+    user: { select: { id: true; username: true; email: true } };
+    event: { select: { id: true; title: true } };
+  };
+}>;
+
+type AdminEventPayload = Prisma.EventGetPayload<{
+  include: {
+    organizer: { select: { id: true; username: true; email: true } };
+  };
+}>;
+
+type AdminBookingPayload = Prisma.BookingGetPayload<{
+  include: {
+    user: { select: { id: true; username: true; email: true } };
+    event: { select: { id: true; title: true; date: true } };
+  };
+}>;
+
+export class AdminRepository {
+  async getDashboardStats() {
     const [totalUsers, totalEvents, totalBookings, revenueResult, recentBookings] =
       await Promise.all([
-        User.countDocuments(),
-        Event.countDocuments({ isPublished: true }),
-        Booking.countDocuments({ bookingStatus: 'confirmed' }),
-        Booking.aggregate([
-          { $match: { paymentStatus: 'completed' } },
-          { $group: { _id: null, total: { $sum: '$totalAmount' } } },
-        ]),
-        Booking.find()
-          .populate('userId', 'username email')
-          .populate('eventId', 'title')
-          .sort({ createdAt: -1 })
-          .limit(10),
+        prisma.user.count(),
+        prisma.event.count({ where: { isPublished: true } }),
+        prisma.booking.count({ where: { bookingStatus: 'confirmed' } }),
+        prisma.booking.aggregate({
+          where: { paymentStatus: 'completed' },
+          _sum: { totalAmount: true },
+        }),
+        prisma.booking.findMany({
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            user: { select: { id: true, username: true, email: true } },
+            event: { select: { id: true, title: true } },
+          },
+        }),
       ]);
+
+    const formattedRecent = recentBookings.map((b: RecentBookingPayload) => ({
+      ...b,
+      _id: b.id,
+      userId: b.user,
+      eventId: b.event,
+    }));
 
     return {
       totalUsers,
       totalEvents,
       totalBookings,
-      totalRevenue: revenueResult[0]?.total || 0,
-      recentBookings,
+      totalRevenue: revenueResult._sum.totalAmount || 0,
+      recentBookings: formattedRecent,
     };
   }
 
-  async findUsers(
-    page: number,
-    limit: number
-  ): Promise<{
-    users: IUser[];
-    pagination: { page: number; limit: number; total: number; pages: number };
-  }> {
+  async findUsers(page: number, limit: number) {
     const skip = (page - 1) * limit;
     const [users, total] = await Promise.all([
-      User.find().sort({ createdAt: -1 }).skip(skip).limit(limit),
-      User.countDocuments(),
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true,
+          profileImage: true,
+          isVerified: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      }),
+      prisma.user.count(),
     ]);
 
+    const formatted = users.map((u: UserSelectResult) => ({
+      ...u,
+      _id: u.id,
+    }));
+
     return {
-      users,
+      users: formatted,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
 
-  async updateUserRole(userId: string, role: string): Promise<IUser | null> {
-    return User.findByIdAndUpdate(userId, { role }, { new: true });
+  async updateUserRole(userId: string, role: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { role },
+    });
   }
 
-  async findEvents(): Promise<IEvent[]> {
-    return Event.find().populate('organizer', 'username email').sort({ createdAt: -1 });
+  async findEvents() {
+    const events = await prisma.event.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        organizer: {
+          select: { id: true, username: true, email: true },
+        },
+      },
+    });
+
+    return events.map((e: AdminEventPayload) => ({
+      ...e,
+      _id: e.id,
+      organizer: e.organizer,
+    }));
   }
 
-  async findBookings(
-    page: number,
-    limit: number
-  ): Promise<{
-    bookings: IBooking[];
-    pagination: { page: number; limit: number; total: number; pages: number };
-  }> {
+  async findBookings(page: number, limit: number) {
     const skip = (page - 1) * limit;
     const [bookings, total] = await Promise.all([
-      Booking.find()
-        .populate('userId', 'username email')
-        .populate('eventId', 'title date')
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit),
-      Booking.countDocuments(),
+      prisma.booking.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: { select: { id: true, username: true, email: true } },
+          event: { select: { id: true, title: true, date: true } },
+        },
+      }),
+      prisma.booking.count(),
     ]);
 
+    const formatted = bookings.map((b: AdminBookingPayload) => ({
+      ...b,
+      _id: b.id,
+      userId: b.user,
+      eventId: b.event,
+    }));
+
     return {
-      bookings,
+      bookings: formatted,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }

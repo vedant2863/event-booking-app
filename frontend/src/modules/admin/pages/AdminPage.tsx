@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Users, Calendar, Ticket, TrendingUp } from 'lucide-react';
 import { adminApi } from '../api';
-import { AdminStats, Booking, Event, User } from '../../shared/types';
+import { AdminStats, Booking, Event, User, UserRole } from '../../shared/types';
 import toast from 'react-hot-toast';
 
 const populatedUser = (ref: string | User | undefined): User | null =>
@@ -42,7 +42,9 @@ export const AdminPage = () => {
   const handleRoleChange = async (userId: string, role: string) => {
     try {
       await adminApi.updateUserRole(userId, role);
-      setUsers((prev) => prev.map((u) => (u._id === userId ? { ...u, role: role as any } : u)));
+      setUsers((prev) =>
+        prev.map((u) => (u._id === userId ? { ...u, role: role as UserRole } : u))
+      );
       toast.success('Role updated');
     } catch {
       toast.error('Failed to update role');

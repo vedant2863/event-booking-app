@@ -1,35 +1,63 @@
-import { IUser, User } from '../../../shared/models/user.model';
+import { prisma } from '../../../shared/database/prisma';
 import { RegisterDto } from '../dto/auth.types';
 
-import { BaseRepository } from './BaseRepository';
-
-export class AuthRepository extends BaseRepository<IUser> {
-  constructor() {
-    super(User);
+export class AuthRepository {
+  async findByEmail(email: string) {
+    return prisma.user.findUnique({
+      where: { email },
+    });
   }
 
-  async findByEmail(email: string, includeSensitiveFields = false): Promise<IUser | null> {
-    const query = this.model.findOne({ email });
-    if (includeSensitiveFields) {
-      return query.select('+password +refreshToken').exec();
-    }
-    return query.exec();
+  async findById(userId: string) {
+    return prisma.user.findUnique({
+      where: { id: userId },
+    });
   }
 
-  async findById(userId: string, includeSensitiveFields = false): Promise<IUser | null> {
-    const query = this.model.findById(userId);
-    if (includeSensitiveFields) {
-      return query.select('+refreshToken').exec();
-    }
-    return query.exec();
+  async create(dto: RegisterDto) {
+    return prisma.user.create({
+      data: {
+        username: dto.username,
+        email: dto.email,
+        password: dto.password,
+        role: dto.role || 'user',
+        isVerified: true,
+      },
+    });
   }
 
-  async create(dto: RegisterDto): Promise<IUser> {
-    return super.create(dto as Partial<IUser>);
+  async updateRefreshToken(userId: string, refreshToken?: string | null) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken },
+    });
   }
 
-  async updateRefreshToken(userId: string, refreshToken?: string): Promise<IUser | null> {
-    return this.model.findByIdAndUpdate(userId, { refreshToken }, { new: true }).exec();
+  async updateRole(userId: string, role: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { role },
+    });
+  }
+
+  async findAll() {
+    return prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        profileImage: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async count() {
+    return prisma.user.count();
   }
 }
 

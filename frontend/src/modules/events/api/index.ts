@@ -3,7 +3,8 @@ import { ApiResponse, CreateEventPayload, Event, SeatLayout } from '../../shared
 
 // Events
 export const eventsApi = {
-  getAll: (params?: Record<string, any>) => api.get<ApiResponse<Event[]>>('/events', { params }),
+  getAll: (params?: Record<string, unknown>) =>
+    api.get<ApiResponse<Event[]>>('/events', { params }),
   getById: (id: string) => api.get<ApiResponse<Event>>(`/events/${id}`),
   getWithSeats: (id: string) =>
     api.get<ApiResponse<{ event: Event; layout: SeatLayout }>>(`/events/${id}/seats`),

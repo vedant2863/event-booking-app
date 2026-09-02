@@ -1,6 +1,5 @@
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { Ticket } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authApi } from '../api';
 import { useAuthStore } from '../store/authStore';
@@ -27,54 +26,68 @@ export const RegisterPage = () => {
     try {
       const { data: res } = await authApi.register(data);
       setAuth(res.data!.user, res.data!.accessToken);
-      toast.success('Account created!');
-      navigate('/events');
+      toast.success('Welcome to BookMyShow! Your account is ready.');
+      navigate('/');
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
-      toast.error(err.response?.data?.message || 'Registration failed');
+      toast.error(err.response?.data?.message || 'Registration failed. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-16">
-      <div className="w-full max-w-md space-y-8 animate-fade-up">
-        <div className="text-center">
-          <div className="inline-flex w-14 h-14 bg-brand-500 rounded-2xl items-center justify-center mb-4">
-            <Ticket className="w-8 h-8 text-white" />
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md space-y-6">
+        {/* BookMyShow Logo */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-1 text-3xl font-black tracking-tight text-white mb-2">
+            <span>book</span>
+            <span className="bg-[#f84464] text-white px-2 py-0.5 rounded text-lg font-black uppercase">
+              my
+            </span>
+            <span>show</span>
           </div>
-          <h1 className="font-display font-bold text-3xl text-white">Create account</h1>
-          <p className="text-gray-400 mt-2">Join EventBook and start exploring</p>
+          <h1 className="text-2xl font-extrabold text-white">Create Your Account</h1>
+          <p className="text-xs text-gray-400">
+            Join millions of movie lovers & entertainment fans
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="card p-8 space-y-5">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="bg-gray-900 border border-gray-800 rounded-2xl p-6 sm:p-8 space-y-4 shadow-2xl"
+        >
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
+            <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+              Full Name / Username
+            </label>
             <input
               {...register('username', {
                 required: 'Username is required',
                 minLength: { value: 2, message: 'Min 2 characters' },
               })}
               className="input"
-              placeholder="johndoe"
+              placeholder="Vedant Patil"
             />
             {errors.username && (
-              <p className="text-red-400 text-xs mt-1">{errors.username.message}</p>
+              <p className="text-[#f84464] text-xs mt-1">{errors.username.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+            <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+              Email Address
+            </label>
             <input
               {...register('email', { required: 'Email is required' })}
               type="email"
               className="input"
-              placeholder="you@example.com"
+              placeholder="vedant@example.com"
             />
-            {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email.message}</p>}
+            {errors.email && <p className="text-[#f84464] text-xs mt-1">{errors.email.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+            <label className="block text-xs font-semibold text-gray-300 mb-1.5">Password</label>
             <input
               {...register('password', {
                 required: 'Password is required',
@@ -85,26 +98,30 @@ export const RegisterPage = () => {
               placeholder="••••••••"
             />
             {errors.password && (
-              <p className="text-red-400 text-xs mt-1">{errors.password.message}</p>
+              <p className="text-[#f84464] text-xs mt-1">{errors.password.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">I want to</label>
+            <label className="block text-xs font-semibold text-gray-300 mb-1.5">Account Role</label>
             <select {...register('role')} className="input">
-              <option value="user">Attend events (User)</option>
-              <option value="organizer">Organize events (Organizer)</option>
+              <option value="user">Movie & Event Lover (User)</option>
+              <option value="organizer">Cinema / Event Organizer (Organizer)</option>
             </select>
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full bg-[#f84464] hover:bg-[#e03050] text-white font-bold py-3 rounded-xl text-sm transition-all shadow-lg shadow-rose-950/40 disabled:opacity-50"
+          >
             {isSubmitting ? 'Creating account...' : 'Create Account'}
           </button>
 
-          <p className="text-center text-sm text-gray-400">
-            Already have an account?{' '}
-            <Link to="/login" className="text-brand-400 hover:text-brand-300">
-              Sign in
+          <p className="text-center text-xs text-gray-400 pt-2">
+            Already have a BookMyShow account?{' '}
+            <Link to="/login" className="text-[#f84464] hover:underline font-bold">
+              Sign In
             </Link>
           </p>
         </form>

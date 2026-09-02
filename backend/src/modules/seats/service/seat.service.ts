@@ -1,6 +1,7 @@
+import { Seat } from '@prisma/client';
+
 import { getRedis } from '../../../shared/database/redis';
 import { ConflictError, NotFoundError } from '../../../shared/errors/AppError';
-import { Seat, SeatStatus } from '../../../shared/models/seat.model';
 import { SeatRepository } from '../repository/seat.repository';
 
 const LOCK_TTL = 300; // 5 minutes in seconds
@@ -15,39 +16,39 @@ export class SeatService {
 
   async lockSeats(seatIds: string[], eventId: string, userId: string): Promise<boolean> {
     const redis = getRedis();
-    const seats = await this.seatRepository.findSeatsByIds(seatIds, eventId);
+    const seats: Seat[] = await this.seatRepository.findSeatsByIds(seatIds, eventId);
 
     if (seats.length !== seatIds.length) throw new NotFoundError('One or more seats');
 
     // Check all are available
-    const unavailable = seats.filter((s) => s.status !== SeatStatus.AVAILABLE);
+    const unavailable = seats.filter((s: Seat) => s.status !== 'available');
     if (unavailable.length > 0)
       throw new ConflictError(
-        `Seats ${unavailable.map((s) => s.seatNumber).join(', ')} are not available`
+        `Seats ${unavailable.map((s: Seat) => s.seatNumber).join(', ')} are not available`
       );
 
     // Try to acquire Redis locks atomically
-    const pipeline = redis.pipeline(); // Use pipeline for atomicity
+    const pipeline = redis.pipeline();
     for (const seat of seats) {
-      const key = this.getLockKey(eventId, seat._id.toString());
-      pipeline.set(key, userId, 'EX', LOCK_TTL, 'NX'); // Set if not exists with TTL
+      const key = this.getLockKey(eventId, seat.id);
+      pipeline.set(key, userId, 'EX', LOCK_TTL, 'NX');
     }
 
     const results = await pipeline.exec();
     const allLocked = results?.every(([err, result]) => !err && result === 'OK');
 
     if (!allLocked) {
-      // Release any locks we did acquire
       await this.releaseLocksForUser(seatIds, eventId, userId);
       throw new ConflictError('Some seats were just taken. Please try again.');
     }
 
-    // Update DB status
-    const lockedUntil = new Date(Date.now() + LOCK_TTL * 1000); // Convert to milliseconds i.e. 5 minutes from now
-    await Seat.updateMany(
-      { _id: { $in: seatIds }, eventId },
-      { status: SeatStatus.LOCKED, lockedBy: userId, lockedUntil }
-    );
+    // Update DB status in PostgreSQL via Prisma
+    const lockedUntil = new Date(Date.now() + LOCK_TTL * 1000);
+    await this.seatRepository.updateSeats(seatIds, eventId, {
+      status: 'locked',
+      lockedBy: userId,
+      lockedUntil,
+    });
 
     return true;
   }
@@ -58,7 +59,6 @@ export class SeatService {
 
     for (const seatId of seatIds) {
       const key = this.getLockKey(eventId, seatId);
-      // Only delete if user owns the lock
       pipeline.eval(
         `if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`,
         1,
@@ -68,10 +68,11 @@ export class SeatService {
     }
     await pipeline.exec();
 
-    await Seat.updateMany(
-      { _id: { $in: seatIds }, eventId, lockedBy: userId },
-      { status: SeatStatus.AVAILABLE, lockedBy: undefined, lockedUntil: undefined }
-    );
+    await this.seatRepository.updateSeats(seatIds, eventId, {
+      status: 'available',
+      lockedBy: null,
+      lockedUntil: null,
+    });
   }
 
   async confirmSeats(
@@ -81,11 +82,11 @@ export class SeatService {
     bookingId: string
   ): Promise<void> {
     await this.seatRepository.updateSeats(seatIds, eventId, {
-      status: SeatStatus.BOOKED,
+      status: 'booked',
       bookedBy: userId,
       bookingId,
-      lockedBy: undefined,
-      lockedUntil: undefined,
+      lockedBy: null,
+      lockedUntil: null,
     });
 
     // Remove Redis locks
@@ -98,16 +99,13 @@ export class SeatService {
   }
 
   async releaseSeats(seatIds: string[], eventId: string): Promise<void> {
-    await Seat.updateMany(
-      { _id: { $in: seatIds }, eventId },
-      {
-        status: SeatStatus.AVAILABLE,
-        bookedBy: undefined,
-        bookingId: undefined,
-        lockedBy: undefined,
-        lockedUntil: undefined,
-      }
-    );
+    await this.seatRepository.updateSeats(seatIds, eventId, {
+      status: 'available',
+      bookedBy: null,
+      bookingId: null,
+      lockedBy: null,
+      lockedUntil: null,
+    });
 
     const redis = getRedis();
     const pipeline = redis.pipeline();

@@ -1,0 +1,119 @@
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "binary"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  username     String
+  email        String    @unique
+  password     String
+  role         String    @default("user")
+  refreshToken String?
+  profileImage String?
+  isVerified   Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  events       Event[]
+  bookings     Booking[]
+  payments     Payment[]
+
+  @@map("users")
+}
+
+model Event {
+  id             String    @id @default(uuid())
+  title          String
+  description    String
+  category       String
+  venue          Json
+  date           DateTime
+  endDate        DateTime?
+  organizerId    String
+  organizer      User      @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  banner         String?
+  tags           String[]  @default([])
+  isPublished    Boolean   @default(true)
+  isCancelled    Boolean   @default(false)
+  totalSeats     Int       @default(0)
+  availableSeats Int       @default(0)
+  minPrice       Float     @default(0)
+  maxPrice       Float     @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  seats          Seat[]
+  bookings       Booking[]
+
+  @@map("events")
+}
+
+model Seat {
+  id          String    @id @default(uuid())
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  seatNumber  String
+  row         String
+  section     String
+  price       Float
+  status      String    @default("available")
+  lockedBy    String?
+  lockedUntil DateTime?
+  bookedBy    String?
+  bookingId   String?
+  booking     Booking?  @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([eventId, seatNumber])
+  @@index([eventId, status])
+  @@map("seats")
+}
+
+model Booking {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId          String
+  event            Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  seatDetails      Json
+  totalAmount      Float
+  bookingStatus    String    @default("pending")
+  paymentStatus    String    @default("pending")
+  bookingReference String    @unique
+  expiresAt        DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  seats            Seat[]
+  payments         Payment[]
+
+  @@index([userId])
+  @@index([eventId])
+  @@map("bookings")
+}
+
+model Payment {
+  id             String    @id @default(uuid())
+  bookingId      String
+  booking        Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount         Float
+  currency       String    @default("INR")
+  provider       String    @default("RAZORPAY")
+  transactionId  String    @unique
+  status         String    @default("pending")
+  paymentDetails Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("payments")
+}

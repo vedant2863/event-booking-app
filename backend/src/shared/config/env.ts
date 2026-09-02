@@ -6,7 +6,9 @@ dotenv.config();
 const envSchema = z.object({
   PORT: z.string().default('8000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
+  DATABASE_URL: z
+    .string()
+    .default('postgresql://postgres:postgres@localhost:5432/eventbooking?schema=public'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
   JWT_REFRESH_SECRET: z.string().min(1, 'JWT_REFRESH_SECRET is required'),
@@ -32,7 +34,7 @@ if (!parsed.success) {
 export const config = {
   port: parseInt(parsed.data.PORT, 10),
   nodeEnv: parsed.data.NODE_ENV,
-  mongoUri: parsed.data.MONGO_URI,
+  databaseUrl: parsed.data.DATABASE_URL,
   redisUrl: parsed.data.REDIS_URL,
   jwt: {
     secret: parsed.data.JWT_SECRET,

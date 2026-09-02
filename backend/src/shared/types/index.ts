@@ -1,5 +1,4 @@
 import { Request } from 'express';
-import { Types } from 'mongoose';
 
 export interface AuthPayload {
   userId: string;
@@ -28,6 +27,8 @@ export enum PaymentStatus {
 }
 
 export enum EventCategory {
+  MOVIE = 'movie',
+  STREAM = 'stream',
   MUSIC = 'music',
   SPORTS = 'sports',
   TECH = 'tech',
@@ -63,4 +64,4 @@ export interface ApiResponse<T = unknown> {
   };
 }
 
-export type ObjectId = Types.ObjectId;
+export type ObjectId = string;

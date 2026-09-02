@@ -1,35 +1,42 @@
-import type { UpdateQuery } from 'mongoose';
+import { Prisma } from '@prisma/client';
 
-import { ISeat, Seat } from '../../../shared/models/seat.model';
+import { prisma } from '../../../shared/database/prisma';
 
-import { BaseRepository } from './BaseRepository';
-
-export class SeatRepository extends BaseRepository<ISeat> {
-  constructor() {
-    super(Seat);
-  }
-
+export class SeatRepository {
   async findSeatsByIds(seatIds: string[], eventId: string) {
-    return this.model.find({
-      _id: { $in: seatIds },
-      eventId,
+    return prisma.seat.findMany({
+      where: {
+        id: { in: seatIds },
+        eventId,
+      },
     });
   }
 
-  async updateSeats(seatIds: string[], eventId: string, update: UpdateQuery<ISeat>) {
-    return this.model.updateMany(
-      {
-        _id: { $in: seatIds },
+  async updateSeats(
+    seatIds: string[],
+    eventId: string,
+    updateData: Prisma.SeatUncheckedUpdateManyInput
+  ) {
+    return prisma.seat.updateMany({
+      where: {
+        id: { in: seatIds },
         eventId,
       },
-      update
-    );
+      data: updateData,
+    });
   }
 
   async getSeatsByEvent(eventId: string) {
-    return this.model.find({ eventId }).sort({
-      section: 1,
-      row: 1,
+    return prisma.seat.findMany({
+      where: { eventId },
+      orderBy: [{ section: 'asc' }, { row: 'asc' }, { seatNumber: 'asc' }],
+    });
+  }
+
+  async createSeats(seats: Prisma.SeatCreateManyInput[]) {
+    return prisma.seat.createMany({
+      data: seats,
+      skipDuplicates: true,
     });
   }
 }

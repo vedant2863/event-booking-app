@@ -1,260 +1,415 @@
-import mongoose from 'mongoose';
-
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/eventbooking';
+const prisma = new PrismaClient();
 
-// ── Inline schema copies (avoid circular imports) ────────────────────────────
-
-const userSchema = new mongoose.Schema(
+const BOOKMYSHOW_EVENTS = [
+  // --- Blockbuster Movies (Screening across all cities) ---
   {
-    username: String,
-    email: String,
-    password: String,
-    role: { type: String, default: 'user' },
-    isVerified: { type: Boolean, default: true },
-  },
-  { timestamps: true }
-);
-const User = mongoose.model('User', userSchema);
-
-const eventSchema = new mongoose.Schema(
-  {
-    title: String,
-    description: String,
-    venue: Object,
-    category: String,
-    date: Date,
-    endDate: Date,
-    organizer: mongoose.Schema.Types.ObjectId,
-    banner: String,
-    tags: [String],
-    isPublished: { type: Boolean, default: true },
-    isCancelled: { type: Boolean, default: false },
-    totalSeats: Number,
-    availableSeats: Number,
-    minPrice: Number,
-    maxPrice: Number,
-  },
-  { timestamps: true }
-);
-const Event = mongoose.model('Event', eventSchema);
-
-const seatSchema = new mongoose.Schema(
-  {
-    eventId: mongoose.Schema.Types.ObjectId,
-    seatNumber: String,
-    row: String,
-    section: String,
-    price: Number,
-    status: { type: String, default: 'available' },
-  },
-  { timestamps: true }
-);
-seatSchema.index({ eventId: 1, seatNumber: 1 }, { unique: true });
-const Seat = mongoose.model('Seat', seatSchema);
-
-// ── Seed data ─────────────────────────────────────────────────────────────────
-
-interface ISeedSeat {
-  eventId: mongoose.Types.ObjectId;
-  seatNumber: string;
-  row: string;
-  section: string;
-  price: number;
-  status: string;
-}
-
-const DEMO_EVENTS = [
-  {
-    title: 'Arijit Singh Live in Concert',
+    title: 'Kalki 2898 AD (IMAX 3D)',
     description:
-      "Experience the magic of Arijit Singh live! India's most beloved singer performs his greatest hits spanning two decades. An evening you will never forget.",
-    category: 'music',
+      'Set in a post-apocalyptic world in the year 2898 AD, a modern avatar of Vishnu descends to Earth to protect the world from dark forces. Starring Prabhas, Amitabh Bachchan, Kamal Haasan, and Deepika Padukone.',
+    category: 'movie',
     venue: {
-      name: 'MMRDA Grounds',
-      address: 'Bandra-Kurla Complex',
+      name: 'PVR: INORBIT Mall',
+      address: 'Link Road, Malad West',
       city: 'Mumbai',
       state: 'Maharashtra',
       country: 'India',
-      capacity: 20000,
+      capacity: 350,
     },
-    daysFromNow: 15,
+    daysFromNow: 1,
+    durationHours: 3,
+    banner: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80',
+    tags: ['Action', 'Sci-Fi', 'Mythology', 'IMAX 3D', 'Hindi', 'Telugu'],
+    sections: [
+      { name: 'RECLINER LUXURY', rows: ['A', 'B'], seatsPerRow: 12, price: 650 },
+      { name: 'PRIME PLUS', rows: ['C', 'D', 'E', 'F'], seatsPerRow: 18, price: 350 },
+      { name: 'CLASSIC EXECUTIVE', rows: ['G', 'H', 'I', 'J'], seatsPerRow: 20, price: 220 },
+    ],
+  },
+  {
+    title: 'Dune: Part Two (IMAX 2D)',
+    description:
+      'Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family. Directed by Denis Villeneuve, starring Timothée Chalamet and Zendaya.',
+    category: 'movie',
+    venue: {
+      name: 'INOX: Megaplex',
+      address: 'Phoenix Marketcity, Kurla West',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      country: 'India',
+      capacity: 400,
+    },
+    daysFromNow: 2,
+    durationHours: 3,
+    banner: 'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=800&q=80',
+    tags: ['Sci-Fi', 'Adventure', 'Drama', 'IMAX', 'English'],
+    sections: [
+      { name: 'RECLINER LUXURY', rows: ['A', 'B'], seatsPerRow: 12, price: 700 },
+      { name: 'PRIME PLUS', rows: ['C', 'D', 'E', 'F'], seatsPerRow: 18, price: 380 },
+      { name: 'CLASSIC EXECUTIVE', rows: ['G', 'H', 'I'], seatsPerRow: 20, price: 250 },
+    ],
+  },
+  {
+    title: 'Stree 2: Sarkate Ka Aatank',
+    description:
+      'After the events of Stree, the town of Chanderi is being haunted again by a new headless monster named Sarkata. Starring Shraddha Kapoor, Rajkummar Rao, Pankaj Tripathi, and Abhishek Banerjee.',
+    category: 'movie',
+    venue: {
+      name: 'Cinépolis: Grand Central',
+      address: 'Seawoods, Navi Mumbai',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      country: 'India',
+      capacity: 320,
+    },
+    daysFromNow: 3,
+    durationHours: 2.5,
+    banner: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&q=80',
+    tags: ['Horror', 'Comedy', 'Blockbuster', 'Hindi'],
+    sections: [
+      { name: 'VIP RECLINER', rows: ['A', 'B'], seatsPerRow: 10, price: 550 },
+      { name: 'CLUB', rows: ['C', 'D', 'E', 'F'], seatsPerRow: 16, price: 300 },
+      { name: 'EXECUTIVE', rows: ['G', 'H', 'I'], seatsPerRow: 18, price: 180 },
+    ],
+  },
+
+  // --- Mumbai Live Shows ---
+  {
+    title: 'Coldplay: Music of the Spheres World Tour',
+    category: 'music',
+    description:
+      'The biggest global stadium band of our generation returns to India! Experience Chris Martin and Coldplay live at DY Patil Stadium with lasers, LED wristbands, and timeless anthems.',
+    venue: {
+      name: 'DY Patil Stadium',
+      address: 'Sector 7, Nerul, Navi Mumbai',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      country: 'India',
+      capacity: 50000,
+    },
+    daysFromNow: 14,
     durationHours: 4,
     banner: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&q=80',
-    tags: ['bollywood', 'live-music', 'concert'],
+    tags: ['Concert', 'Live Band', 'International', 'Stadium'],
     sections: [
-      { name: 'Golden Pit', rows: ['A', 'B', 'C'], seatsPerRow: 20, price: 5000 },
-      { name: 'Silver', rows: ['D', 'E', 'F', 'G', 'H'], seatsPerRow: 25, price: 3000 },
-      { name: 'General', rows: ['I', 'J', 'K', 'L', 'M', 'N', 'O'], seatsPerRow: 30, price: 1500 },
+      { name: 'STANDING LOUNGE PIT', rows: ['A', 'B', 'C'], seatsPerRow: 20, price: 6500 },
+      { name: 'LEVEL 1 PREMIUM', rows: ['D', 'E', 'F', 'G'], seatsPerRow: 25, price: 4500 },
+      { name: 'LEVEL 2 GENERAL', rows: ['H', 'I', 'J', 'K', 'L'], seatsPerRow: 30, price: 2500 },
     ],
   },
   {
-    title: 'ReactConf India 2025',
+    title: 'Diljit Dosanjh: Dil-Luminati Tour India',
+    category: 'music',
     description:
-      'The premier React.js conference in India. Learn from top engineers, attend workshops on React 19, Server Components, Next.js App Router, and the future of web development.',
-    category: 'tech',
+      'Pan-India sensation Diljit Dosanjh brings his monumental Dil-Luminati Tour to Mumbai! Non-stop bhangra, soulful Punjabi ballads, and arena energy.',
     venue: {
-      name: 'Bombay Exhibition Centre',
-      address: 'NESCO, Goregaon',
+      name: 'MMRDA Grounds',
+      address: 'Bandra Kurla Complex (BKC)',
       city: 'Mumbai',
       state: 'Maharashtra',
       country: 'India',
-      capacity: 3000,
+      capacity: 25000,
     },
-    daysFromNow: 30,
-    durationHours: 8,
-    banner: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&q=80',
-    tags: ['react', 'javascript', 'web-dev', 'conference'],
+    daysFromNow: 20,
+    durationHours: 4,
+    banner: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80',
+    tags: ['Punjabi', 'Concert', 'Mega Tour', 'Live Music'],
     sections: [
-      { name: 'VIP Front', rows: ['A', 'B'], seatsPerRow: 15, price: 4999 },
-      {
-        name: 'Standard',
-        rows: ['C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'],
-        seatsPerRow: 20,
-        price: 1999,
-      },
-      { name: 'Balcony', rows: ['K', 'L', 'M'], seatsPerRow: 25, price: 999 },
+      { name: 'FAN PIT FRONT', rows: ['A', 'B', 'C'], seatsPerRow: 20, price: 7500 },
+      { name: 'GOLD TIER', rows: ['D', 'E', 'F', 'G'], seatsPerRow: 25, price: 3800 },
+      { name: 'SILVER TIER', rows: ['H', 'I', 'J', 'K', 'L'], seatsPerRow: 30, price: 1999 },
     ],
   },
   {
-    title: 'IPL 2025: MI vs CSK',
+    title: 'Zakir Khan: Live Standup Comedy Special',
+    category: 'comedy',
     description:
-      'The clash of titans! Mumbai Indians take on Chennai Super Kings in this high-voltage IPL encounter. Witness cricket at its finest.',
+      'India\'s favorite "Sakht Launda" Zakir Khan takes the stage with brand new observations, desi family anecdotes, and hilarious life lessons.',
+    venue: {
+      name: 'NCPA Tata Theatre',
+      address: 'Nariman Point',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      country: 'India',
+      capacity: 1000,
+    },
+    daysFromNow: 8,
+    durationHours: 2,
+    banner: 'https://images.unsplash.com/photo-1525260579839-5478b265a2d1?w=800&q=80',
+    tags: ['Standup Comedy', 'Hindi', 'Humor', 'Live Show'],
+    sections: [
+      { name: 'VIP FRONT ROWS', rows: ['A', 'B', 'C'], seatsPerRow: 16, price: 2500 },
+      { name: 'PREMIUM BALCONY', rows: ['D', 'E', 'F', 'G'], seatsPerRow: 20, price: 1200 },
+    ],
+  },
+  {
+    title: 'IPL 2025: Mumbai Indians vs Chennai Super Kings',
     category: 'sports',
+    description:
+      'The El Clásico of T20 Cricket! Rohit Sharma, Hardik Pandya and the Mumbai Indians battle MS Dhoni and the Chennai Super Kings at the iconic Wankhede Stadium.',
     venue: {
       name: 'Wankhede Stadium',
-      address: 'Marine Lines',
+      address: 'Marine Lines, Churchgate',
       city: 'Mumbai',
       state: 'Maharashtra',
       country: 'India',
       capacity: 33000,
     },
-    daysFromNow: 7,
+    daysFromNow: 10,
     durationHours: 5,
     banner: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800&q=80',
-    tags: ['cricket', 'ipl', 'mi', 'csk'],
+    tags: ['Cricket', 'IPL 2025', 'MI vs CSK', 'Stadium Live'],
     sections: [
-      { name: 'Corporate Box', rows: ['A', 'B'], seatsPerRow: 12, price: 8000 },
-      { name: 'North Stand', rows: ['C', 'D', 'E', 'F'], seatsPerRow: 20, price: 2500 },
-      { name: 'East Stand', rows: ['G', 'H', 'I', 'J', 'K'], seatsPerRow: 25, price: 1200 },
-      { name: 'General Stand', rows: ['L', 'M', 'N', 'O', 'P', 'Q'], seatsPerRow: 30, price: 600 },
+      { name: 'CORPORATE HOSPITALITY BOX', rows: ['A', 'B'], seatsPerRow: 12, price: 9500 },
+      { name: 'GARWARE PAVILION', rows: ['C', 'D', 'E', 'F'], seatsPerRow: 20, price: 3500 },
+      { name: 'NORTH STAND', rows: ['G', 'H', 'I', 'J', 'K'], seatsPerRow: 25, price: 1500 },
+      { name: 'EAST GENERAL STAND', rows: ['L', 'M', 'N', 'O', 'P'], seatsPerRow: 30, price: 800 },
     ],
   },
   {
-    title: 'Zakir Khan: Haq Se Single',
+    title: 'Mughal-E-Azam: The Grand Musical',
+    category: 'theatre',
     description:
-      'India\'s favourite "Sakht Launda" Zakir Khan returns with his brand new stand-up special. An evening of pure desi comedy, relatable stories, and non-stop laughter.',
-    category: 'comedy',
+      "Feroz Abbas Khan's Broadway-style musical adaptation of K. Asif's timeless classic. Grand sets, Manish Malhotra costumes, and live Kathak dancers.",
     venue: {
-      name: 'NCPA Tata Theatre',
-      address: 'NCPA Marg, Nariman Point',
+      name: 'The Grand Theatre, NMACC',
+      address: 'BKC, Bandra East',
       city: 'Mumbai',
       state: 'Maharashtra',
       country: 'India',
-      capacity: 1010,
-    },
-    daysFromNow: 21,
-    durationHours: 2,
-    banner: 'https://images.unsplash.com/photo-1525260579839-5478b265a2d1?w=800&q=80',
-    tags: ['comedy', 'standup', 'hindi'],
-    sections: [
-      { name: 'Premium', rows: ['A', 'B', 'C'], seatsPerRow: 15, price: 2500 },
-      { name: 'Standard', rows: ['D', 'E', 'F', 'G', 'H', 'I'], seatsPerRow: 18, price: 1200 },
-    ],
-  },
-  {
-    title: 'Kala Ghoda Arts Festival 2025',
-    description:
-      "Mumbai's iconic annual arts festival returns for 9 days of art installations, live performances, food stalls, workshops, and cultural experiences across Kala Ghoda precinct.",
-    category: 'art',
-    venue: {
-      name: 'Kala Ghoda Precinct',
-      address: 'Kala Ghoda',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      country: 'India',
-      capacity: 5000,
-    },
-    daysFromNow: 45,
-    durationHours: 10,
-    banner: 'https://images.unsplash.com/photo-1578926375605-eaf7559b1458?w=800&q=80',
-    tags: ['art', 'culture', 'festival', 'family'],
-    sections: [
-      { name: 'Day Pass', rows: ['A', 'B', 'C', 'D', 'E'], seatsPerRow: 20, price: 500 },
-      { name: 'VIP All-Access', rows: ['F', 'G'], seatsPerRow: 10, price: 2000 },
-    ],
-  },
-  {
-    title: 'Masterchef Pop-Up: Coastal Flavours',
-    description:
-      'A one-of-a-kind dining experience curated by MasterChef India alumni. Eight courses celebrating the coastal cuisine of India — from Kerala backwaters to Goan shores.',
-    category: 'food',
-    venue: {
-      name: 'The Taj Mahal Palace',
-      address: 'Apollo Bunder, Colaba',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      country: 'India',
-      capacity: 200,
+      capacity: 2000,
     },
     daysFromNow: 12,
     durationHours: 3,
-    banner: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80',
-    tags: ['food', 'dining', 'masterchef', 'gourmet'],
+    banner: 'https://images.unsplash.com/photo-1460723237483-7a6dc9d0b212?w=800&q=80',
+    tags: ['Theatre', 'Musical', 'Broadway', 'Culture'],
     sections: [
-      { name: 'Dining Table', rows: ['T1', 'T2', 'T3', 'T4'], seatsPerRow: 8, price: 7500 },
-      { name: 'Bar Seating', rows: ['B1'], seatsPerRow: 12, price: 4500 },
+      { name: 'ROYAL DIAMOND BOX', rows: ['A', 'B'], seatsPerRow: 10, price: 8500 },
+      { name: 'PLATINUM ORCHESTRA', rows: ['C', 'D', 'E'], seatsPerRow: 16, price: 5000 },
+      { name: 'GOLD BALCONY', rows: ['F', 'G', 'H', 'I'], seatsPerRow: 20, price: 2500 },
+    ],
+  },
+
+  // --- Delhi-NCR Live Shows ---
+  {
+    title: 'Arijit Singh: Soulful Symphony Live Delhi',
+    category: 'music',
+    description:
+      'Experience the magic of Arijit Singh with a 50-piece international grand orchestra at Jawaharlal Nehru Stadium, Delhi.',
+    venue: {
+      name: 'Jawaharlal Nehru Stadium',
+      address: 'Pragati Vihar, Lodhi Road',
+      city: 'Delhi-NCR',
+      state: 'Delhi',
+      country: 'India',
+      capacity: 40000,
+    },
+    daysFromNow: 16,
+    durationHours: 3.5,
+    banner: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&q=80',
+    tags: ['Concert', 'Romantic', 'Live Music', 'Arijit Singh'],
+    sections: [
+      { name: 'FAN PIT (FRONT)', rows: ['A', 'B', 'C'], seatsPerRow: 20, price: 6999 },
+      { name: 'GOLD SEATS', rows: ['D', 'E', 'F', 'G'], seatsPerRow: 25, price: 3999 },
+      { name: 'SILVER STAND', rows: ['H', 'I', 'J', 'K'], seatsPerRow: 30, price: 1999 },
+    ],
+  },
+  {
+    title: 'Bassam Shaka & Friends: Live Comedy Fest',
+    category: 'comedy',
+    description:
+      'Top standup comics from North India gather for an evening of side-splitting laughter and uncensored observational comedy.',
+    venue: {
+      name: 'Siri Fort Auditorium',
+      address: 'August Kranti Marg, Siri Fort',
+      city: 'Delhi-NCR',
+      state: 'Delhi',
+      country: 'India',
+      capacity: 1800,
+    },
+    daysFromNow: 6,
+    durationHours: 2,
+    banner: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=800&q=80',
+    tags: ['Standup Comedy', 'Hindi', 'Delhi Jokes'],
+    sections: [
+      { name: 'VIP FRONT', rows: ['A', 'B'], seatsPerRow: 15, price: 1800 },
+      { name: 'EXECUTIVE', rows: ['C', 'D', 'E'], seatsPerRow: 20, price: 999 },
+    ],
+  },
+  {
+    title: 'IPL 2025: Delhi Capitals vs Royal Challengers Bengaluru',
+    category: 'sports',
+    description:
+      'Rishabh Pant and the Delhi Capitals host Virat Kohli and RCB in an electrifying evening clash at Kotla.',
+    venue: {
+      name: 'Arun Jaitley Stadium',
+      address: 'Feroz Shah Kotla, Bahadur Shah Zafar Marg',
+      city: 'Delhi-NCR',
+      state: 'Delhi',
+      country: 'India',
+      capacity: 35000,
+    },
+    daysFromNow: 9,
+    durationHours: 4.5,
+    banner: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=800&q=80',
+    tags: ['Cricket', 'IPL 2025', 'DC vs RCB'],
+    sections: [
+      { name: 'PLATINUM CORPORATE', rows: ['A', 'B'], seatsPerRow: 14, price: 8500 },
+      { name: 'CLUB STAND', rows: ['C', 'D', 'E'], seatsPerRow: 22, price: 3200 },
+      { name: 'GENERAL STAND', rows: ['F', 'G', 'H', 'I'], seatsPerRow: 28, price: 1200 },
+    ],
+  },
+
+  // --- Bengaluru Live Shows ---
+  {
+    title: 'Sunburn Arena: Alan Walker Walkerworld Tour',
+    category: 'music',
+    description:
+      'Global EDM titan Alan Walker returns to India’s tech and party capital with his chart-topping hits Faded, Alone, and Spectacular laser show.',
+    venue: {
+      name: 'Manpho Convention Center',
+      address: 'Nagavara, Manyata Tech Park Road',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      country: 'India',
+      capacity: 15000,
+    },
+    daysFromNow: 18,
+    durationHours: 5,
+    banner: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80',
+    tags: ['EDM', 'Sunburn', 'Alan Walker', 'Dance'],
+    sections: [
+      { name: 'VIP ARENA PIT', rows: ['A', 'B', 'C'], seatsPerRow: 20, price: 4999 },
+      { name: 'GA PHASE 1', rows: ['D', 'E', 'F', 'G'], seatsPerRow: 25, price: 2499 },
+    ],
+  },
+  {
+    title: 'Kenny Sebastian: Professor of Logic Live',
+    category: 'comedy',
+    description:
+      'Kenny Sebastian brings his guitar, quirky observations, and sharp wit to Bengaluru for a two-hour special.',
+    venue: {
+      name: 'Chowdiah Memorial Hall',
+      address: '16th Cross, Malleshwaram',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      country: 'India',
+      capacity: 1000,
+    },
+    daysFromNow: 5,
+    durationHours: 2,
+    banner: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=800&q=80',
+    tags: ['Standup Comedy', 'English', 'Musical Comedy'],
+    sections: [
+      { name: 'VIP ROWS', rows: ['A', 'B'], seatsPerRow: 14, price: 2000 },
+      { name: 'BALCONY', rows: ['C', 'D', 'E'], seatsPerRow: 18, price: 1000 },
+    ],
+  },
+
+  // --- Hyderabad Live Shows ---
+  {
+    title: 'Anirudh Ravichander: Hukum World Tour Live',
+    category: 'music',
+    description:
+      'Rockstar Anirudh brings his unmatched high-energy concert to Hyderabad! Badass anthems, bass drops, and stadium frenzy.',
+    venue: {
+      name: 'GMR Arena',
+      address: 'Rajiv Gandhi Intl Airport Road, Shamshabad',
+      city: 'Hyderabad',
+      state: 'Telangana',
+      country: 'India',
+      capacity: 30000,
+    },
+    daysFromNow: 22,
+    durationHours: 4,
+    banner: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&q=80',
+    tags: ['Concert', 'Anirudh', 'Hukum', 'Rockstar'],
+    sections: [
+      { name: 'HUKUM FAN PIT', rows: ['A', 'B', 'C'], seatsPerRow: 20, price: 5999 },
+      { name: 'GOLD ARENA', rows: ['D', 'E', 'F'], seatsPerRow: 24, price: 2999 },
+      { name: 'SILVER STAND', rows: ['G', 'H', 'I', 'J'], seatsPerRow: 30, price: 1499 },
+    ],
+  },
+  {
+    title: 'Rahul Subramanian: Who Are You? Live',
+    category: 'comedy',
+    description:
+      'Brand new crowd-work and solo special by master improviser Rahul Subramanian at Shilpakala Vedika.',
+    venue: {
+      name: 'Shilpakala Vedika',
+      address: 'Hitec City, Madhapur',
+      city: 'Hyderabad',
+      state: 'Telangana',
+      country: 'India',
+      capacity: 2500,
+    },
+    daysFromNow: 7,
+    durationHours: 2,
+    banner: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=800&q=80',
+    tags: ['Comedy', 'Crowd Work', 'Humor'],
+    sections: [
+      { name: 'VIP FRONT', rows: ['A', 'B'], seatsPerRow: 16, price: 2000 },
+      { name: 'PREMIUM', rows: ['C', 'D', 'E'], seatsPerRow: 20, price: 1200 },
     ],
   },
 ];
 
-// ── Main seeder ───────────────────────────────────────────────────────────────
+async function main() {
+  console.log('🔄 Connecting to PostgreSQL...');
+  await prisma.$connect();
+  console.log('✅ Connected to PostgreSQL');
 
-async function seed() {
-  await mongoose.connect(MONGO_URI);
-  console.log('✅ Connected to MongoDB');
+  // Clear existing records in reverse relation order
+  console.log('🗑️  Clearing existing tables...');
+  await prisma.payment.deleteMany({});
+  await prisma.seat.deleteMany({});
+  await prisma.booking.deleteMany({});
+  await prisma.event.deleteMany({});
+  await prisma.user.deleteMany({});
+  console.log('✅ Cleared tables');
 
-  // Clear existing data
-  await Promise.all([User.deleteMany({}), Event.deleteMany({}), Seat.deleteMany({})]);
-  console.log('🗑️  Cleared existing data');
-
-  // Create users
+  // Create demo users
   const hashedPassword = await bcrypt.hash('password123', 12);
-  await User.insertMany([
-    {
+  await prisma.user.create({
+    data: {
       username: 'admin',
       email: 'admin@demo.com',
       password: hashedPassword,
       role: 'admin',
       isVerified: true,
     },
-    {
+  });
+
+  const organizerUser = await prisma.user.create({
+    data: {
       username: 'organizer',
       email: 'organizer@demo.com',
       password: hashedPassword,
       role: 'organizer',
       isVerified: true,
     },
-    {
+  });
+
+  await prisma.user.create({
+    data: {
       username: 'johndoe',
       email: 'user@demo.com',
       password: hashedPassword,
       role: 'user',
       isVerified: true,
     },
-  ]);
-  console.log('👥 Created 3 demo users');
+  });
 
-  const organizerUser = await User.findOne({ email: 'organizer@demo.com' });
-  if (!organizerUser) throw new Error('Organizer user not found');
+  console.log('👥 Created 3 demo users (admin, organizer, user)');
 
-  // Create events with seats
+  // Seed events with multi-tier seating
   let totalSeatsCreated = 0;
-  for (const eventData of DEMO_EVENTS) {
+  for (const eventData of BOOKMYSHOW_EVENTS) {
     const now = new Date();
     const date = new Date(now.getTime() + eventData.daysFromNow * 24 * 60 * 60 * 1000);
     const endDate = new Date(date.getTime() + eventData.durationHours * 60 * 60 * 1000);
@@ -269,30 +424,31 @@ async function seed() {
       if (s.price > maxPrice) maxPrice = s.price;
     }
 
-    const event = await Event.create({
-      title: eventData.title,
-      description: eventData.description,
-      category: eventData.category,
-      venue: eventData.venue,
-      date,
-      endDate,
-      organizer: organizerUser._id,
-      banner: eventData.banner,
-      tags: eventData.tags,
-      isPublished: true,
-      totalSeats,
-      availableSeats: totalSeats,
-      minPrice,
-      maxPrice,
+    const event = await prisma.event.create({
+      data: {
+        title: eventData.title,
+        description: eventData.description,
+        category: eventData.category,
+        venue: eventData.venue,
+        date,
+        endDate,
+        organizerId: organizerUser.id,
+        banner: eventData.banner,
+        tags: eventData.tags,
+        isPublished: true,
+        totalSeats,
+        availableSeats: totalSeats,
+        minPrice,
+        maxPrice,
+      },
     });
 
-    // Generate seats
-    const seats: ISeedSeat[] = [];
+    const seats = [];
     for (const section of eventData.sections) {
       for (const row of section.rows) {
         for (let i = 1; i <= section.seatsPerRow; i++) {
           seats.push({
-            eventId: event._id,
+            eventId: event.id,
             seatNumber: `${row}${i}`,
             row,
             section: section.name,
@@ -302,22 +458,32 @@ async function seed() {
         }
       }
     }
-    await Seat.insertMany(seats);
+
+    await prisma.seat.createMany({
+      data: seats,
+      skipDuplicates: true,
+    });
+
     totalSeatsCreated += seats.length;
-    console.log(`  🎭 "${event.title}" — ${seats.length} seats`);
+    console.log(
+      `  🎟️  "${event.title}" [${eventData.venue.city}] seeded with ${seats.length} seats (Min: ₹${minPrice}, Max: ₹${maxPrice})`
+    );
   }
 
-  console.log(`\n✅ Seeded ${DEMO_EVENTS.length} events with ${totalSeatsCreated} total seats`);
+  console.log(
+    `\n🎉 Seeded ${BOOKMYSHOW_EVENTS.length} BookMyShow events across major Indian cities with ${totalSeatsCreated} total seats into PostgreSQL!`
+  );
   console.log('\n🔑 Demo credentials:');
   console.log('   Admin:     admin@demo.com     / password123');
   console.log('   Organizer: organizer@demo.com / password123');
-  console.log('   User:      user@demo.com      / password123');
-
-  await mongoose.disconnect();
-  console.log('\n🎉 Seeding complete!');
+  console.log('   User:      user@demo.com      / password123\n');
 }
 
-seed().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error('❌ Seeding error:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

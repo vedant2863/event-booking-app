@@ -1,72 +1,46 @@
-import mongoose, { Connection } from 'mongoose';
-
-import { config } from '../config/env';
 import { logger } from '../utils/logger';
 
+import { prisma } from './prisma';
+
 /**
- * MongoDB database manager/connector
+ * PostgreSQL Database Manager via Prisma
  */
-class MongoConnection {
-  private connection: Connection | null;
-  constructor() {
-    this.connection = null;
-  }
+class DatabaseConnection {
+  private isConnected = false;
 
   /**
-   * Connect to MongoDB
-   * @returns {Promise<mongoose.Connection>}
+   * Connect to PostgreSQL
    */
   async connect() {
     try {
-      if (this.connection) {
-        logger.info('Mongodb already connected');
-        return this.connection;
+      if (this.isConnected) {
+        logger.info('PostgreSQL already connected');
+        return;
       }
 
-      await mongoose.connect(config.mongoUri);
-
-      this.connection = mongoose.connection;
-
-      logger.info(`MongoDB connected: ${config.mongoUri}`);
-
-      this.connection.on('error', (err) => {
-        logger.error('MongoDB connection error', err);
-      });
-
-      this.connection.on('disconnected', () => {
-        logger.error('MongoDB Disconnected');
-      });
-
-      return this.connection;
+      await prisma.$connect();
+      this.isConnected = true;
+      logger.info('PostgreSQL connected successfully via Prisma');
     } catch (error) {
-      logger.error('Failed to connect to MongoDB:', error);
-      throw error;
+      logger.error('Failed to connect to PostgreSQL:', error);
+      // Non-fatal in dev / startup so server starts gracefully
     }
   }
 
   /**
-   * This helps to disconnet the active mongodb connection
+   * Disconnect from PostgreSQL
    */
   async disconnect() {
     try {
-      if (this.connection) {
-        await mongoose.disconnect();
-        this.connection = null;
-        logger.info('Mongodb disconnected!');
+      if (this.isConnected) {
+        await prisma.$disconnect();
+        this.isConnected = false;
+        logger.info('PostgreSQL disconnected');
       }
     } catch (error) {
-      logger.error('Failed to disconnect to MongoDB:', error);
-      throw error;
+      logger.error('Failed to disconnect from PostgreSQL:', error);
     }
-  }
-
-  /**
-   * Get the active connection
-   * @returns {mongoose.Connection}
-   */
-  getConnection() {
-    return this.connection;
   }
 }
 
-export default new MongoConnection();
+export default new DatabaseConnection();

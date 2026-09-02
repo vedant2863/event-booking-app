@@ -20,6 +20,8 @@ export interface Venue {
 }
 
 export type EventCategory =
+  | 'movie'
+  | 'stream'
   | 'music'
   | 'sports'
   | 'tech'
