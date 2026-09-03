@@ -24,19 +24,26 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://event-booking-app-seat.vercel.app',
+  config.clientUrl,
 ];
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl) or any Vercel/localhost client
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')
+      ) {
+        return callback(null, origin);
       }
-      return callback(new Error('Not allowed by CORS'), false);
+      return callback(null, origin);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret', 'Cookie'],
   })
 );
 
