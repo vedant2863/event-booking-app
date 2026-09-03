@@ -1,8 +1,20 @@
 import axios from 'axios';
 import { useAuthStore } from '../../auth/store/authStore';
 
+const getApiBaseUrl = (): string => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  if (import.meta.env.PROD) {
+    return 'https://event-booking-app-api.vercel.app/api';
+  }
+  return '/api';
+};
+
+export const API_BASE_URL = getApiBaseUrl();
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -31,7 +43,11 @@ api.interceptors.response.use(
       original._retry = true;
       refreshing = true;
       try {
-        const { data } = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
+        const { data } = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        );
         useAuthStore.getState().setAccessToken(data.data.accessToken);
         queue.forEach((cb) => cb());
         queue = [];

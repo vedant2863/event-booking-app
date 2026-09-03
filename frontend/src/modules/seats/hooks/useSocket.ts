@@ -4,6 +4,16 @@ import { useAuthStore } from '../../auth/store/authStore';
 
 type SeatUpdate = { seatId: string; status: 'seat:locked' | 'seat:released' | 'seat:booked' };
 
+const getSocketUrl = (): string => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  if (import.meta.env.PROD) {
+    return 'https://event-booking-app-api.vercel.app';
+  }
+  return '/';
+};
+
 let socket: Socket | null = null;
 
 export const useSocket = () => {
@@ -13,7 +23,7 @@ export const useSocket = () => {
     if (!accessToken) return;
 
     if (!socket) {
-      socket = io('/', {
+      socket = io(getSocketUrl(), {
         auth: { token: accessToken },
         autoConnect: true,
       });
@@ -35,7 +45,7 @@ export const useEventRoom = (
   useEffect(() => {
     if (!eventId || !accessToken) return;
 
-    socketRef.current = io('/', { auth: { token: accessToken } });
+    socketRef.current = io(getSocketUrl(), { auth: { token: accessToken } });
     const sock = socketRef.current;
 
     sock.emit('join:event', eventId);

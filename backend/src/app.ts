@@ -23,7 +23,7 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://event-booking-frontend.vercel.app',
+  'https://event-booking-app-seat.vercel.app',
 ];
 app.use(
   cors({

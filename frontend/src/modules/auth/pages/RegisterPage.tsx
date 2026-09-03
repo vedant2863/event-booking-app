@@ -42,7 +42,7 @@ export const RegisterPage = () => {
           <div className="inline-flex items-center gap-1 text-3xl font-black tracking-tight text-white mb-2">
             <span>book</span>
             <span className="bg-[#f84464] text-white px-2 py-0.5 rounded text-lg font-black uppercase">
-              my
+              my{' '}
             </span>
             <span>show</span>
           </div>

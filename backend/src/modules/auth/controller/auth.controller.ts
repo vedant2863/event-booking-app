@@ -8,10 +8,11 @@ import { LoginDto, RegisterDto } from '../dto/auth.types';
 import { AuthService } from '../services/auth.service';
 import { loginSchema, registerSchema } from '../validation/auth.validation';
 
+const isProd = process.env.NODE_ENV === 'production';
 const cookieOpts = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
+  secure: isProd,
+  sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
 };
 
 const EXPIRE_TIME_7D = 7 * 24 * 60 * 60 * 1000; // 7 days
