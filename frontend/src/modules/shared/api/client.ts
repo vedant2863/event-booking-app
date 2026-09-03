@@ -4,7 +4,8 @@ import { useAuthStore } from '../../auth/store/authStore';
 const getApiBaseUrl = (): string => {
   const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
   if (envUrl) {
-    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
+    const trimmed = envUrl.replace(/\/+$/, '');
+    return trimmed.endsWith('/api') ? trimmed : `${trimmed}/api`;
   }
   if (import.meta.env.PROD) {
     return 'https://event-booking-app-api.vercel.app/api';
