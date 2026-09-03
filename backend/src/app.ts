@@ -20,11 +20,11 @@ app.set('trust proxy', 1);
 
 // Security
 app.use(helmet({ crossOriginResourcePolicy: false }));
+
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://event-booking-app-seat.vercel.app',
-  config.clientUrl,
 ];
 
 app.use(
@@ -47,7 +47,6 @@ app.use(
   })
 );
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,

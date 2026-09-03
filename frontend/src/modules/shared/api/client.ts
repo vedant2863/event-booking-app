@@ -2,8 +2,9 @@ import axios from 'axios';
 import { useAuthStore } from '../../auth/store/authStore';
 
 const getApiBaseUrl = (): string => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    return envUrl.endsWith('/api') ? envUrl : `${envUrl}/api`;
   }
   if (import.meta.env.PROD) {
     return 'https://event-booking-app-api.vercel.app/api';
