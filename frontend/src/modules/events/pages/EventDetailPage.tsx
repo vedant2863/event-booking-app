@@ -5,7 +5,7 @@ import { Calendar, MapPin, ArrowLeft, Ticket, Star, Sparkles, Share2, Film } fro
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../auth/store/authStore';
 import { bookingsApi } from '../../shared/api/services';
-import { Event, Seat, SeatLayout } from '../../shared/types';
+import { Event, Seat, SeatLayout, Booking } from '../../shared/types';
 import { SeatMap } from '../../seats/components/SeatMap';
 import { useEventRoom } from '../../seats/hooks/useSocket';
 import { eventsApi } from '../api';
@@ -32,6 +32,7 @@ export const EventDetailPage = () => {
   const [selectedDate, setSelectedDate] = useState<string>('Today');
   const [showSeatMap, setShowSeatMap] = useState<boolean>(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
+  const [currentBooking, setCurrentBooking] = useState<Booking | null>(null);
 
   const bookingSectionRef = useRef<HTMLDivElement>(null);
 
@@ -89,11 +90,14 @@ export const EventDetailPage = () => {
 
     setBooking(true);
     try {
-      // Step 1: Lock seats in Redis & MongoDB
-      await bookingsApi.create({
+      // Step 1: Lock seats and create pending booking
+      const { data } = await bookingsApi.create({
         eventId: id!,
         seatIds: selectedSeats.map((s) => s._id),
       });
+      if (data.data) {
+        setCurrentBooking(data.data);
+      }
       toast.success('Seats locked for 5 minutes! Proceeding to payment...');
       setIsPaymentModalOpen(true);
     } catch (error: unknown) {
@@ -107,18 +111,19 @@ export const EventDetailPage = () => {
   };
 
   const handlePaymentSuccess = async () => {
+    if (!currentBooking?._id) {
+      toast.error('Booking session expired or not found. Please select seats again.');
+      return;
+    }
     try {
-      // Confirm payment & generate M-Ticket
-      const { data } = await bookingsApi.create({
-        eventId: id!,
-        seatIds: selectedSeats.map((s) => s._id),
-      });
-      await bookingsApi.confirmPayment(data.data!._id);
+      // Step 2: Confirm payment & generate M-Ticket
+      await bookingsApi.confirmPayment(currentBooking._id);
       setIsPaymentModalOpen(false);
       toast.success('🎉 Booking Confirmed! Here is your M-Ticket.');
-      navigate(`/bookings/${data.data!._id}`);
-    } catch {
-      // Direct navigation if booking exists
+      navigate(`/bookings/${currentBooking._id}`);
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(err.response?.data?.message || 'Payment confirmation failed');
       navigate('/bookings');
     }
   };
@@ -390,6 +395,7 @@ export const EventDetailPage = () => {
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onSuccess={handlePaymentSuccess}
+        booking={currentBooking}
         seats={selectedSeats}
         eventTitle={event.title}
         cinemaName={selectedCinema}

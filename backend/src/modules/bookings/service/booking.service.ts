@@ -31,7 +31,11 @@ export class BookingService {
     const event = await prisma.event.findUnique({ where: { id: dto.eventId } });
     if (!event) throw new NotFoundError('Event');
     if (event.isCancelled) throw new ValidationError('Event is cancelled');
-    if (event.date < new Date()) throw new ValidationError('Event has already passed');
+    const now = new Date();
+    const isPast = event.endDate
+      ? event.endDate < now
+      : event.date.getTime() + 12 * 60 * 60 * 1000 < now.getTime();
+    if (isPast) throw new ValidationError('Event has already passed');
 
     const seats: Seat[] = await prisma.seat.findMany({
       where: {
