@@ -4,7 +4,7 @@ import { Search, MapPin, X, Film, Sparkles } from 'lucide-react';
 import { eventsApi } from '../api';
 import { Event } from '../../shared/types';
 import { EventCard } from '../components/EventCard';
-import { useCityStore } from '../../shared/store/cityStore';
+import { useCityStore, POPULAR_CITIES } from '../../shared/store/cityStore';
 
 const CATEGORIES = [
   { id: '', label: 'All Experiences' },
@@ -20,7 +20,7 @@ const CATEGORIES = [
 
 export const EventsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { selectedCity, openModal } = useCityStore();
+  const { selectedCity, openModal, setSelectedCity } = useCityStore();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -34,11 +34,15 @@ export const EventsPage = () => {
     const loadEvents = async () => {
       setLoading(true);
       try {
+        // If user is searching by keywords or selected "All Cities", search nationwide
+        const isNationwide = Boolean(search) || selectedCity?.id === 'all';
+        const cityParam = isNationwide ? undefined : selectedCity?.name;
+
         const { data } = await eventsApi.getAll({
           page,
           search: search || undefined,
           category: category || undefined,
-          city: selectedCity?.name || undefined,
+          city: cityParam || undefined,
         });
         if (!isCancelled) {
           setEvents(data.data || []);
@@ -94,8 +98,12 @@ export const EventsPage = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-800 pb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            {category
-              ? `${CATEGORIES.find((c) => c.id === category)?.label || 'Events'} in ${selectedCity?.name || 'Mumbai'}`
+            {search
+              ? `Results for "${search}"`
+              : category
+              ? `${CATEGORIES.find((c) => c.id === category)?.label || 'Events'} in ${selectedCity?.id === 'all' ? 'All India' : selectedCity?.name || 'Mumbai'}`
+              : selectedCity?.id === 'all'
+              ? 'Explore Entertainment Across India'
               : `Explore Entertainment in ${selectedCity?.name || 'Mumbai'}`}
           </h1>
           <p className="text-xs text-gray-400 mt-1">
@@ -172,9 +180,20 @@ export const EventsPage = () => {
             <strong className="text-gray-200">{selectedCity?.name || 'this city'}</strong>.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            {selectedCity?.id !== 'all' && (
+              <button
+                onClick={() => {
+                  const allCity = POPULAR_CITIES.find((c) => c.id === 'all');
+                  if (allCity) setSelectedCity(allCity);
+                }}
+                className="inline-flex items-center gap-2 bg-[#f84464] hover:bg-[#e03050] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg transition-all"
+              >
+                🌐 Show Events Across All Cities
+              </button>
+            )}
             <Link
               to="/events?category=movie"
-              className="inline-flex items-center gap-2 bg-[#f84464] hover:bg-[#e03050] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg transition-all"
+              className="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold px-4 py-2.5 rounded-xl border border-gray-700 transition-all"
             >
               <Film className="w-3.5 h-3.5" /> Browse Blockbuster Movies
             </Link>

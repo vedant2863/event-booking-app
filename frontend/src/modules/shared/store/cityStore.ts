@@ -10,6 +10,7 @@ export interface City {
 }
 
 export const POPULAR_CITIES: City[] = [
+  { id: 'all', name: 'All Cities', state: 'All India', icon: '🌐', isPopular: true },
   { id: 'mumbai', name: 'Mumbai', state: 'Maharashtra', icon: '🏙️', isPopular: true },
   { id: 'delhi', name: 'Delhi-NCR', state: 'Delhi', icon: '🏛️', isPopular: true },
   { id: 'bengaluru', name: 'Bengaluru', state: 'Karnataka', icon: '💻', isPopular: true },

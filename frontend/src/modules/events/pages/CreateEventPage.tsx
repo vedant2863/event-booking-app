@@ -3,6 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventsApi } from '../api';
+import { useCityStore, POPULAR_CITIES } from '../../shared/store/cityStore';
 
 interface SectionInput {
   name: string;
@@ -28,6 +29,7 @@ interface FormData {
 
 export const CreateEventPage = () => {
   const navigate = useNavigate();
+  const { setSelectedCity } = useCityStore();
   const {
     register,
     handleSubmit,
@@ -42,6 +44,9 @@ export const CreateEventPage = () => {
 
   const onSubmit = async (data: FormData) => {
     try {
+      const rawCity = data.venueCity?.trim() || 'Mumbai';
+      const normalizedCity = rawCity.charAt(0).toUpperCase() + rawCity.slice(1).toLowerCase();
+
       const payload = {
         title: data.title,
         description: data.description,
@@ -51,7 +56,7 @@ export const CreateEventPage = () => {
         venue: {
           name: data.venueName,
           address: data.venueAddress,
-          city: data.venueCity,
+          city: normalizedCity,
           state: data.venueState,
           country: data.venueCountry,
           capacity: Number(data.venueCapacity),
@@ -80,7 +85,19 @@ export const CreateEventPage = () => {
 
       // Auto-publish
       await eventsApi.publish(eventId);
-      toast.success('Event created and published!');
+
+      // Auto-switch user's active city so the event is immediately visible
+      const matchedCity = POPULAR_CITIES.find(
+        (c) => c.name.toLowerCase() === normalizedCity.toLowerCase()
+      ) || {
+        id: normalizedCity.toLowerCase(),
+        name: normalizedCity,
+        state: data.venueState || '',
+        icon: '📍',
+      };
+      setSelectedCity(matchedCity);
+
+      toast.success(`Event created and published in ${normalizedCity}!`);
       navigate(`/events/${eventId}`);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -188,8 +205,14 @@ export const CreateEventPage = () => {
               <input
                 {...register('venueCity', { required: true })}
                 className="input"
-                placeholder="Mumbai"
+                placeholder="e.g. Pune, Mumbai, Delhi-NCR"
+                list="city-options"
               />
+              <datalist id="city-options">
+                {POPULAR_CITIES.filter((c) => c.id !== 'all').map((c) => (
+                  <option key={c.id} value={c.name} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">State *</label>

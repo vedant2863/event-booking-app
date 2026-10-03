@@ -10,6 +10,7 @@ import { EventDetailPage } from './pages/EventDetailPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { BookingDetailPage } from './pages/BookingDetailPage';
 import { CreateEventPage } from './pages/CreateEventPage';
+import { MyEventsPage } from './pages/MyEventsPage';
 import { AdminPage } from './pages/AdminPage';
 
 export const App = () => (
@@ -39,6 +40,7 @@ export const App = () => (
         {/* Organizer / Admin */}
         <Route element={<ProtectedRoute allowedRoles={['organizer', 'admin']} />}>
           <Route path="events/create" element={<CreateEventPage />} />
+          <Route path="my-events" element={<MyEventsPage />} />
         </Route>
 
         {/* Admin only */}

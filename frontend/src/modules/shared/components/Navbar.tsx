@@ -7,6 +7,7 @@ import {
   Ticket,
   PlusCircle,
   LayoutDashboard,
+  Calendar,
   Film,
   Sparkles,
   Music,
@@ -126,6 +127,17 @@ export const Navbar = () => {
                       <Ticket className="w-4 h-4 text-[#f84464]" />
                       <span>Your Orders & Tickets</span>
                     </Link>
+
+                    {(user?.role === 'organizer' || user?.role === 'admin') && (
+                      <Link
+                        to="/my-events"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-gray-800"
+                      >
+                        <Calendar className="w-4 h-4 text-purple-400" />
+                        <span>My Listed Events</span>
+                      </Link>
+                    )}
 
                     {user?.role === 'organizer' && (
                       <Link

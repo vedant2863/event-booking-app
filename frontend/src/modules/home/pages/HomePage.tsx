@@ -99,7 +99,8 @@ export const HomePage = () => {
     const fetchEvents = async () => {
       setLoading(true);
       try {
-        const { data } = await eventsApi.getAll({ city: selectedCity.name });
+        const cityParam = selectedCity.id === 'all' ? undefined : selectedCity.name;
+        const { data } = await eventsApi.getAll({ city: cityParam });
         if (!isCancelled) {
           setEvents(data.data || []);
         }
@@ -118,15 +119,18 @@ export const HomePage = () => {
   }, [selectedCity]);
 
   const movies = events.filter((e) => e.category === 'movie' || e.tags?.includes('movie'));
-  const cityLiveEvents = events.filter(
-    (e) =>
-      e.category !== 'movie' &&
-      (e.venue?.city?.toLowerCase() === selectedCity.name.toLowerCase() ||
-        e.venue?.city?.toLowerCase() === selectedCity.id.toLowerCase())
-  );
+  const isAllCities = selectedCity.id === 'all';
+  const cityLiveEvents = isAllCities
+    ? events.filter((e) => e.category !== 'movie')
+    : events.filter(
+        (e) =>
+          e.category !== 'movie' &&
+          (e.venue?.city?.toLowerCase() === selectedCity.name.toLowerCase() ||
+            e.venue?.city?.toLowerCase() === selectedCity.id.toLowerCase())
+      );
   const liveEvents =
     cityLiveEvents.length > 0 ? cityLiveEvents : events.filter((e) => e.category !== 'movie');
-  const isShowingNationwide = cityLiveEvents.length === 0 && liveEvents.length > 0;
+  const isShowingNationwide = isAllCities || (cityLiveEvents.length === 0 && liveEvents.length > 0);
 
   return (
     <div className="space-y-10 pb-16">

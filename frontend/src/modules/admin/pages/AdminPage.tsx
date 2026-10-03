@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Users, Calendar, Ticket, TrendingUp } from 'lucide-react';
+import { Users, Calendar, Ticket, TrendingUp, PlusCircle, ExternalLink } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { adminApi } from '../api';
+import { eventsApi } from '../../events/api';
 import { AdminStats, Booking, Event, User, UserRole } from '../../shared/types';
 import toast from 'react-hot-toast';
 
@@ -14,8 +16,9 @@ const populatedEvent = (ref: string | Event | undefined): Event | null =>
 export const AdminPage = () => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [tab, setTab] = useState<'overview' | 'users' | 'bookings'>('overview');
+  const [tab, setTab] = useState<'overview' | 'events' | 'users' | 'bookings'>('overview');
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,6 +39,9 @@ export const AdminPage = () => {
   useEffect(() => {
     if (tab === 'bookings') {
       adminApi.getAllBookings().then(({ data }) => setBookings(data.data || []));
+    }
+    if (tab === 'events') {
+      eventsApi.getAll({ limit: 100 }).then(({ data }) => setEvents(data.data || []));
     }
   }, [tab]);
 
@@ -113,7 +119,7 @@ export const AdminPage = () => {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-gray-900 p-1 rounded-xl w-fit">
-        {(['overview', 'users', 'bookings'] as const).map((t) => (
+        {(['overview', 'events', 'users', 'bookings'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -125,6 +131,55 @@ export const AdminPage = () => {
           </button>
         ))}
       </div>
+
+      {/* Events tab */}
+      {tab === 'events' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-white">All Platform Shows ({events.length})</h2>
+            <Link
+              to="/events/create"
+              className="inline-flex items-center gap-1.5 bg-[#f84464] hover:bg-[#e03050] text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow transition"
+            >
+              <PlusCircle className="w-3.5 h-3.5" /> Create Show
+            </Link>
+          </div>
+          <div className="card divide-y divide-gray-800">
+            {events.map((event: Event) => (
+              <div key={event._id} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-white font-medium">{event.title}</p>
+                    <span className="text-[10px] uppercase font-bold bg-[#f84464]/20 text-[#f84464] px-1.5 py-0.5 rounded">
+                      {event.category}
+                    </span>
+                    {event.isPublished ? (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">
+                        Published
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded font-bold">
+                        Draft
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {event.venue?.name}, <strong className="text-gray-300">{event.venue?.city}</strong> · {format(new Date(event.date), 'MMM d, yyyy')} · {event.availableSeats}/{event.totalSeats} seats
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/events/${event._id}`}
+                    className="inline-flex items-center gap-1 text-xs text-[#f84464] hover:underline font-semibold"
+                  >
+                    View Show <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Overview tab */}
       {tab === 'overview' && stats && (

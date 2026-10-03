@@ -33,8 +33,8 @@ export class BookingService {
     if (event.isCancelled) throw new ValidationError('Event is cancelled');
     const now = new Date();
     const isPast = event.endDate
-      ? event.endDate < now
-      : event.date.getTime() + 12 * 60 * 60 * 1000 < now.getTime();
+      ? event.endDate < now // If the event has an end date, check if it's in the past
+      : event.date.getTime() + 12 * 60 * 60 * 1000 < now.getTime(); // If the event doesn't have an end date, assume it lasts 12 hours and check if it's in the past
     if (isPast) throw new ValidationError('Event has already passed');
 
     const seats: Seat[] = await prisma.seat.findMany({

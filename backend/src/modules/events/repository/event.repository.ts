@@ -55,41 +55,57 @@ export class EventRepository {
   }
 
   private buildWhereClause(filter: EventFilter): Prisma.EventWhereInput {
-    const where: Prisma.EventWhereInput = {};
+    const andClauses: Prisma.EventWhereInput[] = [];
 
     if (filter.isPublished !== undefined) {
-      where.isPublished = filter.isPublished;
+      andClauses.push({ isPublished: filter.isPublished });
     }
     if (filter.isCancelled !== undefined) {
-      where.isCancelled = filter.isCancelled;
+      andClauses.push({ isCancelled: filter.isCancelled });
     }
     if (filter.category) {
-      where.category = { equals: filter.category, mode: 'insensitive' };
+      andClauses.push({ category: { equals: filter.category, mode: 'insensitive' } });
     }
     if (filter.search) {
-      where.OR = [
-        { title: { contains: filter.search, mode: 'insensitive' } },
-        { description: { contains: filter.search, mode: 'insensitive' } },
-      ];
+      andClauses.push({
+        OR: [
+          { title: { contains: filter.search, mode: 'insensitive' } },
+          { description: { contains: filter.search, mode: 'insensitive' } },
+        ],
+      });
     }
 
-    if (filter.city && filter.city.toLowerCase() !== 'all') {
-      const normalizedCity = filter.city.trim();
+    if (
+      filter.city &&
+      filter.city.toLowerCase() !== 'all' &&
+      filter.city.toLowerCase() !== 'all cities'
+    ) {
+      const rawCity = filter.city.trim();
+      const lower = rawCity.toLowerCase();
+      const title = lower.charAt(0).toUpperCase() + lower.slice(1);
+      const upper = rawCity.toUpperCase();
+      const cityVariations = Array.from(new Set([rawCity, lower, title, upper]));
+
+      const venueCityOr: Prisma.EventWhereInput[] = cityVariations.map((c) => ({
+        venue: { path: ['city'], string_contains: c },
+      }));
+
       if (filter.category === 'movie') {
         // Movies are available across all cities
       } else if (filter.category) {
-        // Specific live event category -> filter by city
-        where.venue = { path: ['city'], string_contains: normalizedCity };
+        // Specific live event category -> match any casing of city
+        andClauses.push({ OR: venueCityOr });
       } else {
-        // General catalog: Show all movies OR events in the selected city
-        where.OR = [
-          { category: { equals: 'movie', mode: 'insensitive' } },
-          { venue: { path: ['city'], string_contains: normalizedCity } },
-        ];
+        // General catalog: Show all movies OR events in the selected city (any casing)
+        andClauses.push({
+          OR: [{ category: { equals: 'movie', mode: 'insensitive' } }, ...venueCityOr],
+        });
       }
     }
 
-    return where;
+    if (andClauses.length === 0) return {};
+    if (andClauses.length === 1) return andClauses[0];
+    return { AND: andClauses };
   }
 
   async findEvents(filter: EventFilter, skip: number, limit: number) {

@@ -69,6 +69,12 @@ export class EventService {
       if (section.price > maxPrice) maxPrice = section.price;
     }
 
+    // Standardize venue city casing (e.g. "pune" -> "Pune")
+    if (dto.venue?.city) {
+      const trimmed = dto.venue.city.trim();
+      dto.venue.city = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    }
+
     const event = await this.eventRepository.createEvent({
       ...dto,
       date: new Date(dto.date),
@@ -177,7 +183,13 @@ export class EventService {
     if (dto.title) updateData.title = dto.title;
     if (dto.description) updateData.description = dto.description;
     if (dto.category) updateData.category = dto.category;
-    if (dto.venue) updateData.venue = dto.venue;
+    if (dto.venue) {
+      if (dto.venue.city) {
+        const trimmed = dto.venue.city.trim();
+        dto.venue.city = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+      }
+      updateData.venue = dto.venue;
+    }
     if (dto.banner !== undefined) updateData.banner = dto.banner;
     if (dto.tags) updateData.tags = dto.tags;
     if (dto.date) updateData.date = new Date(dto.date);
