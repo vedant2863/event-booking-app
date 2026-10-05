@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, MapPin, X, Film, Sparkles } from 'lucide-react';
+import { Search, MapPin, X, Film, Sparkles, ArrowUpDown } from 'lucide-react';
 import { eventsApi } from '../api';
 import { Event } from '../../shared/types';
 import { EventCard } from '../components/EventCard';
@@ -28,6 +28,7 @@ export const EventsPage = () => {
 
   const search = searchParams.get('search') || '';
   const category = searchParams.get('category') || '';
+  const sort = searchParams.get('sort') || 'newest';
 
   useEffect(() => {
     let isCancelled = false;
@@ -43,9 +44,19 @@ export const EventsPage = () => {
           search: search || undefined,
           category: category || undefined,
           city: cityParam || undefined,
+          sort: sort || 'newest',
         });
         if (!isCancelled) {
-          setEvents(data.data || []);
+          const rawEvents = data.data || [];
+          const sorted =
+            sort === 'newest'
+              ? [...rawEvents].sort((a, b) => {
+                  const timeA = new Date(a.createdAt || a.date).getTime();
+                  const timeB = new Date(b.createdAt || b.date).getTime();
+                  return timeB - timeA;
+                })
+              : rawEvents;
+          setEvents(sorted);
           setTotalPages(data.pagination?.pages || 1);
         }
       } catch {
@@ -63,7 +74,7 @@ export const EventsPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [page, search, category, selectedCity]);
+  }, [page, search, category, selectedCity, sort]);
 
   const handleCategorySelect = (catId: string) => {
     setPage(1);
@@ -87,6 +98,17 @@ export const EventsPage = () => {
     setSearchParams(newParams);
   };
 
+  const handleSortChange = (newSort: string) => {
+    setPage(1);
+    const newParams = new URLSearchParams(searchParams);
+    if (newSort && newSort !== 'newest') {
+      newParams.set('sort', newSort);
+    } else {
+      newParams.delete('sort');
+    }
+    setSearchParams(newParams);
+  };
+
   const clearFilters = () => {
     setPage(1);
     setSearchParams(new URLSearchParams());
@@ -101,10 +123,10 @@ export const EventsPage = () => {
             {search
               ? `Results for "${search}"`
               : category
-              ? `${CATEGORIES.find((c) => c.id === category)?.label || 'Events'} in ${selectedCity?.id === 'all' ? 'All India' : selectedCity?.name || 'Mumbai'}`
-              : selectedCity?.id === 'all'
-              ? 'Explore Entertainment Across India'
-              : `Explore Entertainment in ${selectedCity?.name || 'Mumbai'}`}
+                ? `${CATEGORIES.find((c) => c.id === category)?.label || 'Events'} in ${selectedCity?.id === 'all' ? 'All India' : selectedCity?.name || 'Mumbai'}`
+                : selectedCity?.id === 'all'
+                  ? 'Explore Entertainment Across India'
+                  : `Explore Entertainment in ${selectedCity?.name || 'Mumbai'}`}
           </h1>
           <p className="text-xs text-gray-400 mt-1">
             Book movie tickets, live concerts, sports and activities near you
@@ -140,8 +162,8 @@ export const EventsPage = () => {
         ))}
       </div>
 
-      {/* Search Filter Strip */}
-      <div className="flex items-center gap-3">
+      {/* Search & Sort Filter Strip */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -159,6 +181,36 @@ export const EventsPage = () => {
               <X className="w-4 h-4" />
             </button>
           )}
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="flex items-center gap-2 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 shrink-0">
+          <ArrowUpDown className="w-4 h-4 text-[#f84464] shrink-0" />
+          <span className="text-xs text-gray-400 font-medium">Sort:</span>
+          <select
+            value={sort}
+            onChange={(e) => handleSortChange(e.target.value)}
+            className="bg-transparent text-xs sm:text-sm text-gray-200 font-medium focus:outline-none cursor-pointer"
+          >
+            <option value="newest" className="bg-gray-900 text-white">
+              New to Old (Latest)
+            </option>
+            <option value="oldest" className="bg-gray-900 text-white">
+              Old to New
+            </option>
+            <option value="date_asc" className="bg-gray-900 text-white">
+              Event Date (Upcoming First)
+            </option>
+            <option value="date_desc" className="bg-gray-900 text-white">
+              Event Date (Later First)
+            </option>
+            <option value="price_asc" className="bg-gray-900 text-white">
+              Price (Low to High)
+            </option>
+            <option value="price_desc" className="bg-gray-900 text-white">
+              Price (High to Low)
+            </option>
+          </select>
         </div>
       </div>
 

@@ -26,6 +26,7 @@ export class EventController {
         search?: string;
         dateFrom?: string;
         dateTo?: string;
+        sort?: string;
       };
       const page = query.page ? Number(query.page) : 1;
       const limit = query.limit ? Number(query.limit) : 12;
@@ -37,6 +38,7 @@ export class EventController {
         search: query.search,
         dateFrom: query.dateFrom,
         dateTo: query.dateTo,
+        sort: query.sort,
       });
       ResponseFormatter.success(res, result.events, 'Events fetched', 200, result.pagination);
     } catch (err) {

@@ -1,11 +1,11 @@
 import { Seat } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
-import { prisma } from '../../../shared/database/prisma';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../../shared/errors/AppError';
 import { getSocketServer } from '../../../shared/websocket/socket';
+import { EventRepository, eventRepository } from '../../events/repository/event.repository';
 import { notificationService } from '../../notifications/service/notification.service';
-import { SeatRepository } from '../../seats/repository/seat.repository';
+import { SeatRepository, seatRepository } from '../../seats/repository/seat.repository';
 import { SeatService } from '../../seats/service/seat.service';
 import { BookingRepository } from '../repository/booking.repository';
 
@@ -15,20 +15,26 @@ export interface CreateBookingDto {
 }
 
 export class BookingService {
+  private eventRepository: EventRepository;
+  private seatRepository: SeatRepository;
   private seatService: SeatService;
   private notificationService: typeof notificationService;
 
   constructor(
     private readonly bookingRepository: BookingRepository,
     seatSvc?: SeatService,
-    notifSvc?: typeof notificationService
+    notifSvc?: typeof notificationService,
+    eventRepo?: EventRepository,
+    seatRepo?: SeatRepository
   ) {
-    this.seatService = seatSvc || new SeatService(new SeatRepository());
+    this.seatRepository = seatRepo || seatRepository;
+    this.eventRepository = eventRepo || eventRepository;
+    this.seatService = seatSvc || new SeatService(this.seatRepository);
     this.notificationService = notifSvc || notificationService;
   }
 
   async createBooking(dto: CreateBookingDto, userId: string) {
-    const event = await prisma.event.findUnique({ where: { id: dto.eventId } });
+    const event = await this.eventRepository.findById(dto.eventId);
     if (!event) throw new NotFoundError('Event');
     if (event.isCancelled) throw new ValidationError('Event is cancelled');
     const now = new Date();
@@ -37,12 +43,7 @@ export class BookingService {
       : event.date.getTime() + 12 * 60 * 60 * 1000 < now.getTime(); // If the event doesn't have an end date, assume it lasts 12 hours and check if it's in the past
     if (isPast) throw new ValidationError('Event has already passed');
 
-    const seats: Seat[] = await prisma.seat.findMany({
-      where: {
-        id: { in: dto.seatIds },
-        eventId: dto.eventId,
-      },
-    });
+    const seats: Seat[] = await this.seatRepository.findSeatsByIds(dto.seatIds, dto.eventId);
     if (seats.length !== dto.seatIds.length) throw new NotFoundError('One or more seats');
 
     await this.seatService.lockSeats(dto.seatIds, dto.eventId, userId);
@@ -88,24 +89,16 @@ export class BookingService {
     if (booking.expiresAt && booking.expiresAt < new Date())
       throw new ValidationError('Booking has expired');
 
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        paymentStatus: 'completed',
-        bookingStatus: 'confirmed',
-        expiresAt: null,
-      },
+    const updatedBooking = await this.bookingRepository.updateById(bookingId, {
+      paymentStatus: 'completed',
+      bookingStatus: 'confirmed',
+      expiresAt: null,
     });
 
     const seatIds = booking.seats.map((s: Seat) => s.id);
     await this.seatService.confirmSeats(seatIds, booking.eventId, userId, bookingId);
 
-    await prisma.event.update({
-      where: { id: booking.eventId },
-      data: {
-        availableSeats: { decrement: seatIds.length },
-      },
-    });
+    await this.eventRepository.decrementAvailableSeats(booking.eventId, seatIds.length);
 
     const io = getSocketServer();
     if (io) {
@@ -135,24 +128,16 @@ export class BookingService {
     if (booking.userId !== userId) throw new ForbiddenError();
     if (booking.bookingStatus === 'cancelled') throw new ValidationError('Already cancelled');
 
-    const updatedBooking = await prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        bookingStatus: 'cancelled',
-        paymentStatus: booking.paymentStatus === 'completed' ? 'refunded' : 'failed',
-        cancelledAt: new Date(),
-      },
+    const updatedBooking = await this.bookingRepository.updateById(bookingId, {
+      bookingStatus: 'cancelled',
+      paymentStatus: booking.paymentStatus === 'completed' ? 'refunded' : 'failed',
+      cancelledAt: new Date(),
     });
 
     const seatIds = booking.seats.map((s: Seat) => s.id);
     await this.seatService.releaseSeats(seatIds, booking.eventId);
 
-    await prisma.event.update({
-      where: { id: booking.eventId },
-      data: {
-        availableSeats: { increment: seatIds.length },
-      },
-    });
+    await this.eventRepository.incrementAvailableSeats(booking.eventId, seatIds.length);
 
     const io = getSocketServer();
     if (io) {
@@ -178,25 +163,7 @@ export class BookingService {
   }
 
   async getBookingById(bookingId: string, userId: string) {
-    const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: {
-        event: {
-          select: {
-            id: true,
-            title: true,
-            date: true,
-            venue: true,
-            banner: true,
-            organizerId: true,
-          },
-        },
-        user: {
-          select: { id: true, username: true, email: true },
-        },
-        seats: true,
-      },
-    });
+    const booking = await this.bookingRepository.findById(bookingId);
     if (!booking) throw new NotFoundError('Booking');
     if (booking.userId !== userId) throw new ForbiddenError();
 

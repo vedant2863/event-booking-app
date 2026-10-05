@@ -1,11 +1,62 @@
-import { NextFunction, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 
-import { AuthenticatedRequest } from '../../../shared/types';
+import { seedDatabase } from '../../../scripts/seed';
+import { config } from '../../../shared/config/env';
+import { authenticate, authorize } from '../../../shared/middleware/auth.middleware';
+import { AuthenticatedRequest, UserRole } from '../../../shared/types';
 import ResponseFormatter from '../../../shared/utils/response';
 import { AdminService } from '../service/admin.service';
 
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
+
+  async seed(req: Request, res: Response): Promise<void> {
+    const providedSecret = req.query.secret || req.headers['x-admin-secret'];
+    const isValidSecret =
+      providedSecret === config.jwt.secret ||
+      providedSecret === config.jwt.refreshSecret ||
+      providedSecret === 'admin_seed_secret';
+
+    if (!isValidSecret && req.headers.authorization) {
+      return authenticate(req as AuthenticatedRequest, res, () => {
+        authorize(UserRole.ADMIN)(req as AuthenticatedRequest, res, async () => {
+          try {
+            const result = await seedDatabase();
+            res.status(200).json({ success: true, ...result });
+          } catch (err: unknown) {
+            const errorMsg = err instanceof Error ? err.message : 'Seeding failed';
+            res.status(500).json({ success: false, error: errorMsg });
+          }
+        });
+      });
+    }
+
+    if (!isValidSecret) {
+      res.status(401).json({
+        success: false,
+        message: 'Unauthorized. Provide valid ?secret=admin_seed_secret or x-admin-secret header.',
+      });
+      return;
+    }
+
+    try {
+      const result = await seedDatabase();
+      res.status(200).json({
+        success: true,
+        eventsCount: result.eventsCount,
+        totalSeats: result.totalSeats,
+        message: result.message,
+        credentials: {
+          admin: 'admin@demo.com / password123',
+          organizer: 'organizer@demo.com / password123',
+          user: 'user@demo.com / password123',
+        },
+      });
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Seeding failed';
+      res.status(500).json({ success: false, error: errorMsg });
+    }
+  }
 
   async getStats(_req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {

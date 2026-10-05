@@ -13,7 +13,7 @@ class Container {
     };
 
     const services = {
-      notificationService: new NotificationService(),
+      notificationService: new NotificationService(repositories.notificationRepository),
     };
 
     const controller = {

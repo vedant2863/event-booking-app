@@ -1,3 +1,4 @@
+import seatsDependencies from '../../seats/dependencies/dependencies';
 import { EventController } from '../controller/event.controller';
 import { EventRepository } from '../repository/event.repository';
 import { EventService } from '../service/event.service';
@@ -14,7 +15,10 @@ class Container {
     };
 
     const services = {
-      eventService: new EventService(repositories.eventRepository),
+      eventService: new EventService(
+        repositories.eventRepository,
+        seatsDependencies.repositories.seatRepository
+      ),
     };
 
     const controller = {

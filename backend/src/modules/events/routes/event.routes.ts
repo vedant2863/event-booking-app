@@ -10,6 +10,9 @@ const eventController = controller.eventController;
 
 router.get('/', (req, res, next) => eventController.getEvents(req, res, next));
 router.get('/my', authenticate, (req, res, next) => eventController.getMyEvents(req, res, next));
+router.get('/my-events', authenticate, (req, res, next) =>
+  eventController.getMyEvents(req, res, next)
+);
 router.get('/:id', (req, res, next) => eventController.getEvent(req, res, next));
 router.get('/:id/seats', (req, res, next) => eventController.getEventWithSeats(req, res, next));
 

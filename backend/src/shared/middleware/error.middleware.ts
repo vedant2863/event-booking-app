@@ -12,7 +12,10 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  if (err instanceof AppError || (err && typeof (err as unknown as { statusCode?: number }).statusCode === 'number')) {
+  if (
+    err instanceof AppError ||
+    (err && typeof (err as unknown as { statusCode?: number }).statusCode === 'number')
+  ) {
     const statusCode = (err as unknown as { statusCode: number }).statusCode || 500;
     ResponseFormatter.error(res, err.message, statusCode);
     return;
@@ -50,12 +53,7 @@ export const errorHandler = (
   }
 
   logger.error(err);
-  ResponseFormatter.sendError(
-    res,
-    err.message || 'Internal server error',
-    500,
-    err.message
-  );
+  ResponseFormatter.sendError(res, err.message || 'Internal server error', 500, err.message);
 };
 
 export const notFound = (_req: Request, res: Response): void => {

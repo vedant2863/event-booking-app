@@ -41,7 +41,15 @@ export const AdminPage = () => {
       adminApi.getAllBookings().then(({ data }) => setBookings(data.data || []));
     }
     if (tab === 'events') {
-      eventsApi.getAll({ limit: 100 }).then(({ data }) => setEvents(data.data || []));
+      eventsApi.getAll({ limit: 100, sort: 'newest' }).then(({ data }) => {
+        const rawEvents = data.data || [];
+        const sorted = [...rawEvents].sort((a, b) => {
+          const timeA = new Date(a.createdAt || a.date).getTime();
+          const timeB = new Date(b.createdAt || b.date).getTime();
+          return timeB - timeA;
+        });
+        setEvents(sorted);
+      });
     }
   }, [tab]);
 
@@ -146,7 +154,10 @@ export const AdminPage = () => {
           </div>
           <div className="card divide-y divide-gray-800">
             {events.map((event: Event) => (
-              <div key={event._id} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm">
+              <div
+                key={event._id}
+                className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm"
+              >
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-white font-medium">{event.title}</p>
@@ -164,7 +175,10 @@ export const AdminPage = () => {
                     )}
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {event.venue?.name}, <strong className="text-gray-300">{event.venue?.city}</strong> · {format(new Date(event.date), 'MMM d, yyyy')} · {event.availableSeats}/{event.totalSeats} seats
+                    {event.venue?.name},{' '}
+                    <strong className="text-gray-300">{event.venue?.city}</strong> ·{' '}
+                    {format(new Date(event.date), 'MMM d, yyyy')} · {event.availableSeats}/
+                    {event.totalSeats} seats
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

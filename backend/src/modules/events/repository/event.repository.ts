@@ -108,14 +108,27 @@ export class EventRepository {
     return { AND: andClauses };
   }
 
-  async findEvents(filter: EventFilter, skip: number, limit: number) {
+  async findEvents(filter: EventFilter, skip: number, limit: number, sortBy?: string) {
     const where = this.buildWhereClause(filter);
+
+    let orderBy: Prisma.EventOrderByWithRelationInput[] = [{ createdAt: 'desc' }, { id: 'desc' }];
+    if (sortBy === 'oldest') {
+      orderBy = [{ createdAt: 'asc' }, { id: 'asc' }];
+    } else if (sortBy === 'date_asc') {
+      orderBy = [{ date: 'asc' }, { createdAt: 'desc' }];
+    } else if (sortBy === 'date_desc') {
+      orderBy = [{ date: 'desc' }, { createdAt: 'desc' }];
+    } else if (sortBy === 'price_asc') {
+      orderBy = [{ minPrice: 'asc' }, { createdAt: 'desc' }];
+    } else if (sortBy === 'price_desc') {
+      orderBy = [{ minPrice: 'desc' }, { createdAt: 'desc' }];
+    }
 
     return prisma.event.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { date: 'asc' },
+      orderBy,
       include: {
         organizer: {
           select: { id: true, username: true, email: true, profileImage: true },
@@ -162,6 +175,24 @@ export class EventRepository {
     return prisma.event.findMany({
       where: { organizerId },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async decrementAvailableSeats(eventId: string, count: number) {
+    return prisma.event.update({
+      where: { id: eventId },
+      data: {
+        availableSeats: { decrement: count },
+      },
+    });
+  }
+
+  async incrementAvailableSeats(eventId: string, count: number) {
+    return prisma.event.update({
+      where: { id: eventId },
+      data: {
+        availableSeats: { increment: count },
+      },
     });
   }
 

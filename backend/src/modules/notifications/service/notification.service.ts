@@ -1,6 +1,6 @@
-import { prisma } from '../../../shared/database/prisma';
 import { EmailProvider, SmtpEmailProvider } from '../../../shared/email/email.provider';
 import { logger } from '../../../shared/utils/logger';
+import { NotificationRepository } from '../repository/notification.repository';
 
 interface SeatDetailItem {
   section?: string;
@@ -14,7 +14,10 @@ interface VenueDetailItem {
 }
 
 export class NotificationService {
-  constructor(private readonly emailProvider: EmailProvider = new SmtpEmailProvider()) {}
+  constructor(
+    private readonly notificationRepository: NotificationRepository = new NotificationRepository(),
+    private readonly emailProvider: EmailProvider = new SmtpEmailProvider()
+  ) {}
 
   private async sendEmail(to: string, subject: string, html: string) {
     try {
@@ -26,11 +29,8 @@ export class NotificationService {
 
   async sendBookingConfirmation(bookingId: string, userId: string) {
     const [booking, user] = await Promise.all([
-      prisma.booking.findUnique({
-        where: { id: bookingId },
-        include: { event: true },
-      }),
-      prisma.user.findUnique({ where: { id: userId } }),
+      this.notificationRepository.getBookingWithEvent(bookingId),
+      this.notificationRepository.getUserById(userId),
     ]);
 
     if (!booking || !user) return;
@@ -65,8 +65,8 @@ export class NotificationService {
 
   async sendBookingCancellation(bookingId: string, userId: string) {
     const [booking, user] = await Promise.all([
-      prisma.booking.findUnique({ where: { id: bookingId } }),
-      prisma.user.findUnique({ where: { id: userId } }),
+      this.notificationRepository.getBookingById(bookingId),
+      this.notificationRepository.getUserById(userId),
     ]);
 
     if (!booking || !user) return;

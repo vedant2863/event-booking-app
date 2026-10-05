@@ -1,16 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import {
-  Calendar,
-  MapPin,
-  PlusCircle,
-  Eye,
-  CheckCircle,
-  AlertCircle,
-  Tag,
-  Users,
-} from 'lucide-react';
+import { Calendar, MapPin, PlusCircle, Eye, CheckCircle, AlertCircle, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventsApi } from '../api';
 import { Event } from '../../shared/types';
@@ -23,10 +14,15 @@ export const MyEventsPage = () => {
   const navigate = useNavigate();
 
   const loadEvents = async () => {
-    setLoading(true);
     try {
       const { data } = await eventsApi.getMyEvents();
-      setEvents(data.data || []);
+      const rawEvents = data.data || [];
+      const sorted = [...rawEvents].sort((a, b) => {
+        const timeA = new Date(a.createdAt || a.date).getTime();
+        const timeB = new Date(b.createdAt || b.date).getTime();
+        return timeB - timeA;
+      });
+      setEvents(sorted);
     } catch {
       toast.error('Failed to load your events');
     } finally {
@@ -35,7 +31,34 @@ export const MyEventsPage = () => {
   };
 
   useEffect(() => {
-    loadEvents();
+    let ignore = false;
+    eventsApi
+      .getMyEvents()
+      .then(({ data }) => {
+        if (!ignore) {
+          const rawEvents = data.data || [];
+          const sorted = [...rawEvents].sort((a, b) => {
+            const timeA = new Date(a.createdAt || a.date).getTime();
+            const timeB = new Date(b.createdAt || b.date).getTime();
+            return timeB - timeA;
+          });
+          setEvents(sorted);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          toast.error('Failed to load your events');
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handlePublish = async (id: string) => {

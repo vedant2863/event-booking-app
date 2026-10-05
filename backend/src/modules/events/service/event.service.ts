@@ -1,6 +1,5 @@
 import { Event, Prisma, Seat } from '@prisma/client';
 
-import { prisma } from '../../../shared/database/prisma';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../../shared/errors/AppError';
 import { EventCategory, UserRole } from '../../../shared/types';
 import { SeatRepository } from '../../seats/repository/seat.repository';
@@ -40,6 +39,7 @@ export interface EventQuery {
   search?: string;
   dateFrom?: string;
   dateTo?: string;
+  sort?: string;
 }
 
 export class EventService {
@@ -58,16 +58,23 @@ export class EventService {
     if (new Date(dto.endDate) <= new Date(dto.date))
       throw new ValidationError('End date must be after start date');
 
+    const sections =
+      dto.seatingLayout?.sections ||
+      (dto as unknown as { sections?: CreateEventDto['seatingLayout']['sections'] }).sections ||
+      [];
+
     let totalSeats = 0;
     let minPrice = Infinity;
     let maxPrice = 0;
 
-    for (const section of dto.seatingLayout.sections) {
+    for (const section of sections) {
       const sectionSeats = section.rows.length * section.seatsPerRow;
       totalSeats += sectionSeats;
       if (section.price < minPrice) minPrice = section.price;
       if (section.price > maxPrice) maxPrice = section.price;
     }
+
+    if (minPrice === Infinity) minPrice = 0;
 
     // Standardize venue city casing (e.g. "pune" -> "Pune")
     if (dto.venue?.city) {
@@ -87,7 +94,7 @@ export class EventService {
     });
 
     const seats: Prisma.SeatCreateManyInput[] = [];
-    for (const section of dto.seatingLayout.sections) {
+    for (const section of sections) {
       for (const row of section.rows) {
         for (let i = 1; i <= section.seatsPerRow; i++) {
           seats.push({
@@ -111,7 +118,7 @@ export class EventService {
   }
 
   async getEvents(query: EventQuery) {
-    const { page = 1, limit = 12, category, city, search } = query;
+    const { page = 1, limit = 12, category, city, search, sort = 'newest' } = query;
     const skip = (page - 1) * limit;
 
     const filter: EventFilter = {
@@ -124,7 +131,7 @@ export class EventService {
     if (search) filter.search = search;
 
     const [events, total] = await Promise.all([
-      this.eventRepository.findEvents(filter, skip, limit),
+      this.eventRepository.findEvents(filter, skip, limit, sort),
       this.eventRepository.countEvents(filter),
     ]);
 
@@ -150,10 +157,7 @@ export class EventService {
 
   async getEventWithSeats(id: string) {
     const event = await this.getEventById(id);
-    const seats: Seat[] = await prisma.seat.findMany({
-      where: { eventId: id },
-      orderBy: [{ section: 'asc' }, { row: 'asc' }, { seatNumber: 'asc' }],
-    });
+    const seats: Seat[] = await this.seatRepository.getSeatsByEvent(id);
 
     const formattedSeats = seats.map((s: Seat) => ({
       ...s,

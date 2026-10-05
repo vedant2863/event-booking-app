@@ -100,9 +100,20 @@ export const HomePage = () => {
       setLoading(true);
       try {
         const cityParam = selectedCity.id === 'all' ? undefined : selectedCity.name;
-        const { data } = await eventsApi.getAll({ city: cityParam });
+        const { data } = await eventsApi.getAll({
+          city: cityParam,
+          sort: 'newest',
+          limit: 100,
+        });
         if (!isCancelled) {
-          setEvents(data.data || []);
+          const rawEvents = data.data || [];
+          // Ensure new to old ordering by createdAt (fallback to date)
+          const sorted = [...rawEvents].sort((a, b) => {
+            const timeA = new Date(a.createdAt || a.date).getTime();
+            const timeB = new Date(b.createdAt || b.date).getTime();
+            return timeB - timeA;
+          });
+          setEvents(sorted);
         }
       } catch {
         console.error('Failed to fetch events');
@@ -257,7 +268,7 @@ export const HomePage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-            {(movies.length > 0 ? movies : events).slice(0, 5).map((event) => (
+            {(movies.length > 0 ? movies : events).slice(0, 10).map((event) => (
               <EventCard key={event._id} event={event} />
             ))}
           </div>
@@ -322,7 +333,7 @@ export const HomePage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-            {liveEvents.slice(0, 5).map((event) => (
+            {liveEvents.slice(0, 10).map((event) => (
               <EventCard key={event._id} event={event} />
             ))}
           </div>

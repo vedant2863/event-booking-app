@@ -62,7 +62,14 @@ export class BookingRepository {
       where: { id },
       include: {
         event: {
-          select: { id: true, title: true, date: true, venue: true, banner: true },
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            venue: true,
+            banner: true,
+            organizerId: true,
+          },
         },
         user: {
           select: { id: true, username: true, email: true },

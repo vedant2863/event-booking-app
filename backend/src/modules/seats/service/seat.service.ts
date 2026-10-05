@@ -1,6 +1,5 @@
 import { Seat } from '@prisma/client';
 
-import { prisma } from '../../../shared/database/prisma';
 import { getRedis, isRedisAvailable } from '../../../shared/database/redis';
 import { ConflictError, NotFoundError } from '../../../shared/errors/AppError';
 import { logger } from '../../../shared/utils/logger';
@@ -42,23 +41,14 @@ export class SeatService {
 
     const lockedUntil = new Date(now.getTime() + LOCK_TTL * 1000);
 
-    // Atomically acquire lock in PostgreSQL
-    const updateResult = await prisma.seat.updateMany({
-      where: {
-        id: { in: seatIds },
-        eventId,
-        OR: [
-          { status: 'available' },
-          { status: 'locked', lockedUntil: { lt: now } },
-          { status: 'locked', lockedBy: userId },
-        ],
-      },
-      data: {
-        status: 'locked',
-        lockedBy: userId,
-        lockedUntil,
-      },
-    });
+    // Atomically acquire lock via repository
+    const updateResult = await this.seatRepository.acquireSeatLocks(
+      seatIds,
+      eventId,
+      userId,
+      lockedUntil,
+      now
+    );
 
     if (updateResult.count !== seatIds.length) {
       throw new ConflictError('Some seats were just taken. Please try again.');

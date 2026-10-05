@@ -1,3 +1,4 @@
+import eventsDependencies from '../../events/dependencies/dependencies';
 import notificationsDependencies from '../../notifications/dependencies/dependencies';
 import seatsDependencies from '../../seats/dependencies/dependencies';
 import { BookingController } from '../controller/booking.controller';
@@ -19,7 +20,9 @@ class Container {
       bookingService: new BookingService(
         repositories.bookingRepository,
         seatsDependencies.services.seatService,
-        notificationsDependencies.services.notificationService
+        notificationsDependencies.services.notificationService,
+        eventsDependencies.repositories.eventRepository,
+        seatsDependencies.repositories.seatRepository
       ),
     };
 
