@@ -1,6 +1,7 @@
+
 import * as jwt from 'jsonwebtoken';
 
-import { AuthTokens } from '../../modules/auth/dto/auth.types';
+import { AuthTokens } from '../../modules/auth/types/auth.types';
 import { config } from '../config/env';
 import { UnauthorizedError } from '../errors/AppError';
 import { AuthPayload } from '../types';

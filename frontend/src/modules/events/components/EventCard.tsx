@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Star, MapPin } from 'lucide-react';
-import { Event } from '../../shared/types';
+import { Event } from '../types/event.types';
 
 interface Props {
   event: Event;

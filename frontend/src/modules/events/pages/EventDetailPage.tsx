@@ -1,18 +1,31 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { Calendar, MapPin, ArrowLeft, Ticket, Star, Sparkles, Share2, Film } from 'lucide-react';
+import {
+  Calendar,
+  MapPin,
+  ArrowLeft,
+  Ticket,
+  Star,
+  Sparkles,
+  Share2,
+  Film,
+  Music,
+  Flame,
+  Trophy,
+  Drama,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../auth/store/authStore';
-import { bookingsApi } from '../../shared/api/services';
-import { Event, Seat, SeatLayout, Booking } from '../../shared/types';
+import { bookingsApi } from '../../bookings/api';
+import { Event } from '../types/event.types';
+import { Booking } from '../../bookings/types/booking.types';
+import { Seat, SeatLayout, SeatUpdate } from '../../seats/types/seat.types';
 import { SeatMap } from '../../seats/components/SeatMap';
 import { useEventRoom } from '../../seats/hooks/useSocket';
 import { eventsApi } from '../api';
 import { ShowtimePicker } from '../components/ShowtimePicker';
 import { PaymentModal } from '../../bookings/components/PaymentModal';
-
-type SeatUpdate = { seatId: string; status: 'seat:locked' | 'seat:released' | 'seat:booked' };
 
 export const EventDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,14 +40,41 @@ export const EventDetailPage = () => {
   const [realtimeUpdates, setRealtimeUpdates] = useState<SeatUpdate[]>([]);
 
   // Showtime & Cinema Selection State
-  const [selectedCinema, setSelectedCinema] = useState<string>('PVR: INORBIT Mall, Malad (W)');
-  const [selectedShowtime, setSelectedShowtime] = useState<string>('08:30 PM (IMAX 3D)');
+  const [selectedCinema, setSelectedCinema] = useState<string>('');
+  const [selectedShowtime, setSelectedShowtime] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('Today');
   const [showSeatMap, setShowSeatMap] = useState<boolean>(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState<boolean>(false);
   const [currentBooking, setCurrentBooking] = useState<Booking | null>(null);
 
   const bookingSectionRef = useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState<boolean>(false);
+
+  const resetScroll = () => {
+    window.scrollTo(0, 0);
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+  };
+
+  // Listen to window scroll to display sticky header past hero
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 360);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Auto-scroll window to top whenever opening/navigating to event detail page
+  useEffect(() => {
+    resetScroll();
+    const rafId = requestAnimationFrame(resetScroll);
+    const timer = setTimeout(resetScroll, 60);
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timer);
+    };
+  }, [id]);
 
   // Real-time seat updates
   useEventRoom(id, (data) => {
@@ -47,18 +87,49 @@ export const EventDetailPage = () => {
       setLoading(true);
       try {
         const { data } = await eventsApi.getWithSeats(id);
-        setEvent(data.data!.event);
+        const ev = data.data!.event;
+        setEvent(ev);
         setLayout(data.data!.layout);
+
+        const vName =
+          typeof ev.venue === 'string'
+            ? (() => {
+                try {
+                  return JSON.parse(ev.venue).name;
+                } catch {
+                  return ev.venue;
+                }
+              })()
+            : ev.venue?.name;
+        setSelectedCinema(vName || 'Featured Venue');
+
+        if (ev.category !== 'movie' && ev.date) {
+          try {
+            setSelectedShowtime(`${format(new Date(ev.date), 'hh:mm a')} (Main Show)`);
+          } catch {
+            setSelectedShowtime('07:30 PM (Main Show)');
+          }
+        } else {
+          setSelectedShowtime('08:30 PM (IMAX 3D)');
+        }
       } catch (error: unknown) {
         const err = error as { response?: { data?: { message?: string } } };
         toast.error(err.response?.data?.message || 'Failed to load event details');
         navigate('/events');
       } finally {
         setLoading(false);
+        resetScroll();
+        setTimeout(resetScroll, 50);
       }
     };
     fetch();
   }, [id, navigate]);
+
+  useEffect(() => {
+    if (event?.title) {
+      document.title = `${event.title} - Book Tickets | BookMyShow`;
+    }
+  }, [event?.title]);
 
   const handleShowtimeSelect = (
     cinema: string,
@@ -140,6 +211,52 @@ export const EventDetailPage = () => {
 
   if (!event) return null;
 
+  const isMovie = event.category === 'movie';
+  const isConcert = event.category === 'music';
+  const isComedy = event.category === 'comedy';
+  const isSports = event.category === 'sports';
+  const isTheatre = event.category === 'theatre';
+
+  const venueObj =
+    typeof event.venue === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(event.venue);
+          } catch {
+            return { name: event.venue };
+          }
+        })()
+      : event.venue || {};
+
+  const venueName = venueObj.name || 'Grand Arena';
+  const venueCity = venueObj.city || 'Mumbai';
+  const venueAddress = venueObj.address || '';
+  const venueState = venueObj.state || '';
+
+  const CategoryIcon = isMovie
+    ? Film
+    : isConcert
+    ? Music
+    : isComedy
+    ? Flame
+    : isSports
+    ? Trophy
+    : isTheatre
+    ? Drama
+    : Sparkles;
+
+  const experienceBadge = isMovie
+    ? 'In Cinemas · Now Showing'
+    : isConcert
+    ? 'Live Concert · Mega Arena Tour'
+    : isComedy
+    ? 'Standup Comedy · Live Show'
+    : isSports
+    ? 'Stadium Match · Live In Action'
+    : isTheatre
+    ? 'Live Stage Play · Musical'
+    : 'Live Experience';
+
   const ticketSubtotal = selectedSeats.reduce((sum, s) => sum + s.price, 0);
 
   return (
@@ -159,15 +276,21 @@ export const EventDetailPage = () => {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           {/* Breadcrumb / Back Link */}
-          <Link
-            to="/events"
-            className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white mb-6 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back to Movies & Events
-          </Link>
+          <div className="flex items-center gap-2 text-xs text-gray-400 mb-6 flex-wrap">
+            <Link
+              to="/events"
+              className="inline-flex items-center gap-1.5 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to Movies & Events
+            </Link>
+            <span className="text-gray-600">/</span>
+            <span className="text-gray-400 capitalize">{event.category}</span>
+            <span className="text-gray-600">/</span>
+            <span className="text-white font-semibold truncate max-w-sm">{event.title}</span>
+          </div>
 
           <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-            {/* Movie Poster */}
+            {/* Event Poster */}
             <div className="relative aspect-[2/3] w-56 sm:w-64 rounded-2xl overflow-hidden bg-gray-900 shadow-2xl border border-gray-700 shrink-0">
               <img
                 src={
@@ -177,24 +300,30 @@ export const EventDetailPage = () => {
                 alt={event.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute bottom-0 inset-x-0 bg-black/80 p-2 text-center text-xs font-bold text-white flex items-center justify-center gap-1">
-                <Film className="w-3.5 h-3.5 text-[#f84464]" />
-                <span>In Cinemas · Now Showing</span>
+              <div className="absolute bottom-0 inset-x-0 bg-black/85 backdrop-blur-sm p-2 text-center text-xs font-bold text-white flex items-center justify-center gap-1.5">
+                <CategoryIcon className="w-3.5 h-3.5 text-[#f84464]" />
+                <span>{experienceBadge}</span>
               </div>
             </div>
 
-            {/* Movie Information & Action */}
+            {/* Event Information & Action */}
             <div className="flex-1 space-y-4 text-center md:text-left">
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                  <span className="bg-[#f84464] text-white text-[10px] font-black uppercase px-2 py-0.5 rounded">
+                  <span className="bg-[#f84464] text-white text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wider">
                     {event.category.toUpperCase()}
                   </span>
                   <span className="bg-gray-800 text-gray-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded border border-gray-700">
-                    UA 16+
+                    {isMovie ? 'UA 16+' : isComedy ? 'AGE 16+' : 'ALL AGES'}
                   </span>
                   <span className="bg-gray-800 text-gray-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded border border-gray-700">
-                    2D, 3D, IMAX 3D
+                    {isMovie
+                      ? '2D, 3D, IMAX 3D'
+                      : isConcert
+                      ? 'LIVE STAGE ARENA'
+                      : isSports
+                      ? 'STADIUM STANDS'
+                      : 'RESERVED AUDITORIUM'}
                   </span>
                 </div>
 
@@ -203,8 +332,12 @@ export const EventDetailPage = () => {
                 </h1>
 
                 <p className="text-xs sm:text-sm text-gray-300">
-                  {event.tags?.join(' • ') || 'Action • Sci-Fi • Drama'} | Hindi, English, Telugu,
-                  Tamil | 2h 45m
+                  {event.tags?.join(' • ') ||
+                    (isMovie ? 'Action • Sci-Fi • Drama' : 'Live Musical Performance')}{' '}
+                  |{' '}
+                  {isMovie
+                    ? 'Hindi, English, Telugu, Tamil | 2h 45m'
+                    : 'Live Performance | Gates open 2 hrs before show'}
                 </p>
               </div>
 
@@ -220,7 +353,7 @@ export const EventDetailPage = () => {
                 <div className="h-8 w-[1px] bg-gray-800" />
                 <button
                   onClick={() => toast.success('Thanks for rating this show!')}
-                  className="bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700"
+                  className="bg-gray-800 hover:bg-gray-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-700 cursor-pointer"
                 >
                   Rate Now
                 </button>
@@ -230,12 +363,12 @@ export const EventDetailPage = () => {
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-xs text-gray-300 pt-1">
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-[#f84464]" />
-                  <span>{format(new Date(event.date), 'EEE, d MMM yyyy')}</span>
+                  <span>{format(new Date(event.date), 'EEE, d MMM yyyy • hh:mm a')}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-[#f84464]" />
                   <span>
-                    {event.venue.name}, {event.venue.city}
+                    {venueName}, {venueCity}
                   </span>
                 </div>
               </div>
@@ -246,13 +379,16 @@ export const EventDetailPage = () => {
                   onClick={() => {
                     bookingSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
                   }}
-                  className="bg-[#f84464] hover:bg-[#e03050] text-white font-extrabold text-sm sm:text-base px-8 py-3 rounded-xl shadow-lg shadow-rose-950/50 transition-all flex items-center gap-2"
+                  className="bg-[#f84464] hover:bg-[#e03050] text-white font-extrabold text-sm sm:text-base px-8 py-3 rounded-xl shadow-lg shadow-rose-950/50 transition-all flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95"
                 >
                   <Ticket className="w-5 h-5" /> Book Tickets
                 </button>
                 <button
-                  onClick={() => toast.success('Link copied to clipboard!')}
-                  className="p-3 bg-gray-900 hover:bg-gray-800 text-gray-300 hover:text-white rounded-xl border border-gray-800"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(window.location.href);
+                    toast.success('Link copied to clipboard!');
+                  }}
+                  className="p-3 bg-gray-900 hover:bg-gray-800 text-gray-300 hover:text-white rounded-xl border border-gray-800 cursor-pointer"
                   title="Share"
                 >
                   <Share2 className="w-4 h-4" />
@@ -263,25 +399,98 @@ export const EventDetailPage = () => {
         </div>
       </section>
 
+      {/* Sticky BookMyShow Sub-Header when scrolled past hero */}
+      {isScrolled && (
+        <aside
+          aria-label="Quick event actions"
+          className="sticky top-16 z-30 bg-gray-950/95 backdrop-blur-md border-b border-gray-800 shadow-xl py-3 px-4 transition-all"
+        >
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <img
+                src={
+                  event.banner ||
+                  'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=800&q=80'
+                }
+                alt={event.title}
+                className="w-9 h-12 object-cover rounded-md border border-gray-700 shrink-0 hidden sm:block"
+              />
+              <div className="min-w-0">
+                <h3 className="font-extrabold text-white text-sm sm:text-base truncate">
+                  {event.title}
+                </h3>
+                <p className="text-[11px] text-gray-400 truncate flex items-center gap-2">
+                  <span className="text-[#f84464] font-semibold">{event.category.toUpperCase()}</span>
+                  <span>•</span>
+                  <span>
+                    {venueName}, {venueCity}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              {!showSeatMap ? (
+                <button
+                  onClick={() =>
+                    bookingSectionRef.current?.scrollIntoView({ behavior: 'smooth' })
+                  }
+                  className="bg-[#f84464] hover:bg-[#e03050] text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-lg shadow cursor-pointer transition-all hover:scale-105"
+                >
+                  Book Tickets
+                </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowSeatMap(false)}
+                    className="text-xs text-gray-300 hover:text-white bg-gray-900 border border-gray-700 px-3 py-1.5 rounded-lg cursor-pointer"
+                  >
+                    Change Showtime
+                  </button>
+                  {selectedSeats.length > 0 && (
+                    <button
+                      onClick={handleProceedToPayment}
+                      disabled={booking}
+                      className="bg-[#f84464] hover:bg-[#e03050] text-white text-xs sm:text-sm font-bold px-4 py-2 rounded-lg shadow cursor-pointer transition-all hover:scale-105"
+                    >
+                      Pay ₹{ticketSubtotal}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+      )}
+
       {/* 2. Main Booking & Showtime Section */}
       <div ref={bookingSectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <div className="border-b border-gray-800 pb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-white">
-              {showSeatMap ? 'Select Seats' : 'Select Date & Showtime'}
-            </h2>
-            {showSeatMap && (
-              <button
-                onClick={() => setShowSeatMap(false)}
-                className="text-xs text-[#f84464] hover:underline font-semibold"
-              >
-                Change Showtime
-              </button>
-            )}
+        <div className="border-b border-gray-800 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#f84464] uppercase tracking-wider">
+              <CategoryIcon className="w-4 h-4" />
+              <span>{event.title}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white">
+                {showSeatMap ? `Select Seats (${selectedCinema})` : 'Select Date & Showtime'}
+              </h2>
+              {showSeatMap && (
+                <button
+                  onClick={() => setShowSeatMap(false)}
+                  className="text-xs text-[#f84464] hover:underline font-semibold cursor-pointer"
+                >
+                  Change Showtime
+                </button>
+              )}
+            </div>
           </div>
-          <span className="text-xs text-gray-400">
-            {event.availableSeats} of {event.totalSeats} seats available
-          </span>
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            <span className="bg-gray-900 px-3 py-1.5 rounded-lg border border-gray-800">
+              <strong className="text-white font-bold">{event.availableSeats}</strong> of{' '}
+              {event.totalSeats} seats available
+            </span>
+          </div>
         </div>
 
         {/* Step A: Showtime Picker */}
@@ -295,6 +504,8 @@ export const EventDetailPage = () => {
               onSelectionChange={setSelectedSeats}
               maxSelect={8}
               realtimeUpdates={realtimeUpdates}
+              eventName={event.title}
+              category={event.category}
               cinemaName={selectedCinema}
               showtime={`${selectedDate} • ${selectedShowtime}`}
             />

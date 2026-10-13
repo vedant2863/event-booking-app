@@ -1,52 +1,26 @@
 import { Prisma } from '@prisma/client';
 
-import { prisma } from '../../../shared/database/prisma';
+import { db } from '../../../shared/database/prisma';
+import {
+  AdminBookingPayload,
+  AdminEventPayload,
+  RecentBookingPayload,
+  UserSelectResult,
+} from '../types/admin.types';
 
-type UserSelectResult = Prisma.UserGetPayload<{
-  select: {
-    id: true;
-    username: true;
-    email: true;
-    role: true;
-    profileImage: true;
-    isVerified: true;
-    createdAt: true;
-    updatedAt: true;
-  };
-}>;
-
-type RecentBookingPayload = Prisma.BookingGetPayload<{
-  include: {
-    user: { select: { id: true; username: true; email: true } };
-    event: { select: { id: true; title: true } };
-  };
-}>;
-
-type AdminEventPayload = Prisma.EventGetPayload<{
-  include: {
-    organizer: { select: { id: true; username: true; email: true } };
-  };
-}>;
-
-type AdminBookingPayload = Prisma.BookingGetPayload<{
-  include: {
-    user: { select: { id: true; username: true; email: true } };
-    event: { select: { id: true; title: true; date: true } };
-  };
-}>;
 
 export class AdminRepository {
   async getDashboardStats() {
     const [totalUsers, totalEvents, totalBookings, revenueResult, recentBookings] =
       await Promise.all([
-        prisma.user.count(),
-        prisma.event.count({ where: { isPublished: true } }),
-        prisma.booking.count({ where: { bookingStatus: 'confirmed' } }),
-        prisma.booking.aggregate({
+        db.user.count(),
+        db.event.count({ where: { isPublished: true } }),
+        db.booking.count({ where: { bookingStatus: 'confirmed' } }),
+        db.booking.aggregate({
           where: { paymentStatus: 'completed' },
           _sum: { totalAmount: true },
         }),
-        prisma.booking.findMany({
+        db.booking.findMany({
           orderBy: { createdAt: 'desc' },
           take: 10,
           include: {
@@ -75,7 +49,7 @@ export class AdminRepository {
   async findUsers(page: number, limit: number) {
     const skip = (page - 1) * limit;
     const [users, total] = await Promise.all([
-      prisma.user.findMany({
+      db.user.findMany({
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -90,7 +64,7 @@ export class AdminRepository {
           updatedAt: true,
         },
       }),
-      prisma.user.count(),
+      db.user.count(),
     ]);
 
     const formatted = users.map((u: UserSelectResult) => ({
@@ -105,14 +79,14 @@ export class AdminRepository {
   }
 
   async updateUserRole(userId: string, role: string) {
-    return prisma.user.update({
+    return db.user.update({
       where: { id: userId },
       data: { role },
     });
   }
 
   async findEvents() {
-    const events = await prisma.event.findMany({
+    const events = await db.event.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         organizer: {
@@ -131,7 +105,7 @@ export class AdminRepository {
   async findBookings(page: number, limit: number) {
     const skip = (page - 1) * limit;
     const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
+      db.booking.findMany({
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -140,7 +114,7 @@ export class AdminRepository {
           event: { select: { id: true, title: true, date: true } },
         },
       }),
-      prisma.booking.count(),
+      db.booking.count(),
     ]);
 
     const formatted = bookings.map((b: AdminBookingPayload) => ({

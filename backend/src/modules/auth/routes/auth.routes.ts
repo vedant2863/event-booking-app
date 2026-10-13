@@ -7,10 +7,19 @@ const router = express.Router();
 const { controller } = dependencies;
 const authController = controller.authController;
 
-router.post('/register', (req, res, next) => authController.register(req, res, next));
-router.post('/login', (req, res, next) => authController.login(req, res, next));
-router.post('/refresh', (req, res, next) => authController.refresh(req, res, next));
-router.post('/logout', authenticate, (req, res, next) => authController.logout(req, res, next));
-router.get('/me', authenticate, (req, res, next) => authController.me(req, res, next));
+router.route('/register')
+  .post((req, res, next) => authController.register(req, res, next));
+
+router.route('/login')
+  .post((req, res, next) => authController.login(req, res, next));
+
+router.route('/refresh')
+  .post((req, res, next) => authController.refresh(req, res, next));
+
+router.route('/logout')
+  .post(authenticate, (req, res, next) => authController.logout(req, res, next));
+
+router.route('/me')
+  .get(authenticate, (req, res, next) => authController.me(req, res, next));
 
 export default router;

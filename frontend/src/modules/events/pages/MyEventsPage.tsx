@@ -4,8 +4,8 @@ import { format } from 'date-fns';
 import { Calendar, MapPin, PlusCircle, Eye, CheckCircle, AlertCircle, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventsApi } from '../api';
-import { Event } from '../../shared/types';
-import { useCityStore, POPULAR_CITIES } from '../../shared/store/cityStore';
+import { Event } from '../types/event.types';
+import { useCityStore, POPULAR_CITIES } from '../../../shared/store/cityStore';
 
 export const MyEventsPage = () => {
   const [events, setEvents] = useState<Event[]>([]);

@@ -1,10 +1,10 @@
 import { Prisma } from '@prisma/client';
 
-import { prisma } from '../../../shared/database/prisma';
+import { db } from '../../../shared/database/prisma';
 
 export class SeatRepository {
   async findSeatsByIds(seatIds: string[], eventId: string) {
-    return prisma.seat.findMany({
+    return db.seat.findMany({
       where: {
         id: { in: seatIds },
         eventId,
@@ -17,7 +17,7 @@ export class SeatRepository {
     eventId: string,
     updateData: Prisma.SeatUncheckedUpdateManyInput
   ) {
-    return prisma.seat.updateMany({
+    return db.seat.updateMany({
       where: {
         id: { in: seatIds },
         eventId,
@@ -27,14 +27,14 @@ export class SeatRepository {
   }
 
   async getSeatsByEvent(eventId: string) {
-    return prisma.seat.findMany({
+    return db.seat.findMany({
       where: { eventId },
       orderBy: [{ section: 'asc' }, { row: 'asc' }, { seatNumber: 'asc' }],
     });
   }
 
   async createSeats(seats: Prisma.SeatCreateManyInput[]) {
-    return prisma.seat.createMany({
+    return db.seat.createMany({
       data: seats,
       skipDuplicates: true,
     });
@@ -47,7 +47,7 @@ export class SeatRepository {
     lockedUntil: Date,
     now: Date
   ) {
-    return prisma.seat.updateMany({
+    return db.seat.updateMany({
       where: {
         id: { in: seatIds },
         eventId,

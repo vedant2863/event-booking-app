@@ -1,35 +1,11 @@
 import { Prisma } from '@prisma/client';
 
-import { prisma } from '../../../shared/database/prisma';
-
-export interface EventFilter {
-  category?: string;
-  city?: string;
-  search?: string;
-  isPublished?: boolean;
-  isCancelled?: boolean;
-}
-
-export interface CreateEventRepoData {
-  title: string;
-  description: string;
-  category: string;
-  venue: Prisma.InputJsonValue;
-  date: Date;
-  endDate?: Date;
-  organizerId: string;
-  banner?: string;
-  tags?: string[];
-  isPublished?: boolean;
-  totalSeats: number;
-  availableSeats: number;
-  minPrice: number;
-  maxPrice: number;
-}
+import { db } from '../../../shared/database/prisma';
+import { CreateEventRepoData, EventFilter } from '../types/event.types';
 
 export class EventRepository {
   async createEvent(data: CreateEventRepoData) {
-    return prisma.event.create({
+    return db.event.create({
       data: {
         title: data.title,
         description: data.description,
@@ -124,7 +100,7 @@ export class EventRepository {
       orderBy = [{ minPrice: 'desc' }, { createdAt: 'desc' }];
     }
 
-    return prisma.event.findMany({
+    return db.event.findMany({
       where,
       skip,
       take: limit,
@@ -139,11 +115,11 @@ export class EventRepository {
 
   async countEvents(filter: EventFilter): Promise<number> {
     const where = this.buildWhereClause(filter);
-    return prisma.event.count({ where });
+    return db.event.count({ where });
   }
 
   async findById(id: string) {
-    return prisma.event.findUnique({
+    return db.event.findUnique({
       where: { id },
       include: {
         organizer: {
@@ -154,7 +130,7 @@ export class EventRepository {
   }
 
   async updateById(id: string, update: Prisma.EventUpdateInput) {
-    return prisma.event.update({
+    return db.event.update({
       where: { id },
       data: update,
       include: {
@@ -166,20 +142,20 @@ export class EventRepository {
   }
 
   async deleteById(id: string) {
-    return prisma.event.delete({
+    return db.event.delete({
       where: { id },
     });
   }
 
   async findOrganizerEvents(organizerId: string) {
-    return prisma.event.findMany({
+    return db.event.findMany({
       where: { organizerId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async decrementAvailableSeats(eventId: string, count: number) {
-    return prisma.event.update({
+    return db.event.update({
       where: { id: eventId },
       data: {
         availableSeats: { decrement: count },
@@ -188,7 +164,7 @@ export class EventRepository {
   }
 
   async incrementAvailableSeats(eventId: string, count: number) {
-    return prisma.event.update({
+    return db.event.update({
       where: { id: eventId },
       data: {
         availableSeats: { increment: count },
@@ -197,7 +173,7 @@ export class EventRepository {
   }
 
   async count(): Promise<number> {
-    return prisma.event.count();
+    return db.event.count();
   }
 }
 

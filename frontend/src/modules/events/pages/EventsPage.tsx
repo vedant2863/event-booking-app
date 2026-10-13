@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, MapPin, X, Film, Sparkles, ArrowUpDown } from 'lucide-react';
 import { eventsApi } from '../api';
-import { Event } from '../../shared/types';
+import { Event } from '../types/event.types';
 import { EventCard } from '../components/EventCard';
-import { useCityStore, POPULAR_CITIES } from '../../shared/store/cityStore';
+import { useCityStore, POPULAR_CITIES } from '../../../shared/store/cityStore';
 
 const CATEGORIES = [
   { id: '', label: 'All Experiences' },

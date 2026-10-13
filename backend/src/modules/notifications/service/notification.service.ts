@@ -2,16 +2,7 @@ import { EmailProvider, SmtpEmailProvider } from '../../../shared/email/email.pr
 import { logger } from '../../../shared/utils/logger';
 import { NotificationRepository } from '../repository/notification.repository';
 
-interface SeatDetailItem {
-  section?: string;
-  row?: string;
-  seatNumber?: string;
-}
-
-interface VenueDetailItem {
-  name?: string;
-  city?: string;
-}
+import { SeatDetailItem, VenueDetailItem } from '../types/notification.types';
 
 export class NotificationService {
   constructor(

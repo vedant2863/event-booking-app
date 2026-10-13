@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 
-import { prisma } from '../shared/database/prisma';
+import { db } from '../shared/database/prisma';
 
 dotenv.config();
 
@@ -1017,21 +1017,21 @@ const BOOKMYSHOW_EVENTS: SeedEventItem[] = [
 
 async function main() {
   console.log('🔄 Connecting to PostgreSQL...');
-  await prisma.$connect();
+  await db.$connect();
   console.log('✅ Connected to PostgreSQL');
 
   // Clear existing records in reverse relation order
   console.log('🗑️  Clearing existing tables...');
-  await prisma.payment.deleteMany({});
-  await prisma.seat.deleteMany({});
-  await prisma.booking.deleteMany({});
-  await prisma.event.deleteMany({});
-  await prisma.user.deleteMany({});
+  await db.payment.deleteMany({});
+  await db.seat.deleteMany({});
+  await db.booking.deleteMany({});
+  await db.event.deleteMany({});
+  await db.user.deleteMany({});
   console.log('✅ Cleared tables');
 
   // Create demo users
   const hashedPassword = await bcrypt.hash('password123', 12);
-  await prisma.user.create({
+  await db.user.create({
     data: {
       username: 'admin',
       email: 'admin@demo.com',
@@ -1041,7 +1041,7 @@ async function main() {
     },
   });
 
-  const organizerUser = await prisma.user.create({
+  const organizerUser = await db.user.create({
     data: {
       username: 'organizer',
       email: 'organizer@demo.com',
@@ -1051,7 +1051,7 @@ async function main() {
     },
   });
 
-  await prisma.user.create({
+  await db.user.create({
     data: {
       username: 'johndoe',
       email: 'user@demo.com',
@@ -1083,7 +1083,7 @@ async function main() {
       if (s.price > maxPrice) maxPrice = s.price;
     }
 
-    const event = await prisma.event.create({
+    const event = await db.event.create({
       data: {
         title: eventData.title,
         description: eventData.description,
@@ -1119,7 +1119,7 @@ async function main() {
       }
     }
 
-    await prisma.seat.createMany({
+    await db.seat.createMany({
       data: seats,
       skipDuplicates: true,
     });
@@ -1154,7 +1154,7 @@ if (process.argv[1]?.includes('seed')) {
       process.exit(1);
     })
     .finally(async () => {
-      await prisma.$disconnect();
+      await db.$disconnect();
     });
 }
 

@@ -1,22 +1,12 @@
 import { Prisma } from '@prisma/client';
 import { v4 as uuidv4 } from 'uuid';
 
-import { prisma } from '../../../shared/database/prisma';
-
-export interface CreatePaymentData {
-  bookingId: string;
-  userId: string;
-  amount: number;
-  currency?: string;
-  provider?: string;
-  transactionId?: string;
-  status?: string;
-  paymentDetails?: Prisma.InputJsonValue;
-}
+import { db } from '../../../shared/database/prisma';
+import { CreatePaymentData } from '../types/payment.types';
 
 export class PaymentRepository {
   async createPayment(data: CreatePaymentData) {
-    return prisma.payment.create({
+    return db.payment.create({
       data: {
         bookingId: data.bookingId,
         userId: data.userId,
@@ -31,13 +21,13 @@ export class PaymentRepository {
   }
 
   async findPaymentById(id: string) {
-    return prisma.payment.findUnique({
+    return db.payment.findUnique({
       where: { id },
     });
   }
 
   async updatePaymentById(id: string, update: Prisma.PaymentUpdateInput) {
-    return prisma.payment.update({
+    return db.payment.update({
       where: { id },
       data: update,
     });

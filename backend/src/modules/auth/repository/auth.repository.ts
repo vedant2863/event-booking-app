@@ -1,21 +1,21 @@
-import { prisma } from '../../../shared/database/prisma';
-import { RegisterDto } from '../dto/auth.types';
+import { db } from '../../../shared/database/prisma';
+import { RegisterDto } from '../types/auth.types';
 
 export class AuthRepository {
   async findByEmail(email: string) {
-    return prisma.user.findUnique({
+    return db.user.findUnique({
       where: { email },
     });
   }
 
   async findById(userId: string) {
-    return prisma.user.findUnique({
+    return db.user.findUnique({
       where: { id: userId },
     });
   }
 
   async create(dto: RegisterDto) {
-    return prisma.user.create({
+    return db.user.create({
       data: {
         username: dto.username,
         email: dto.email,
@@ -27,21 +27,21 @@ export class AuthRepository {
   }
 
   async updateRefreshToken(userId: string, refreshToken?: string | null) {
-    return prisma.user.update({
+    return db.user.update({
       where: { id: userId },
       data: { refreshToken },
     });
   }
 
   async updateRole(userId: string, role: string) {
-    return prisma.user.update({
+    return db.user.update({
       where: { id: userId },
       data: { role },
     });
   }
 
   async findAll() {
-    return prisma.user.findMany({
+    return db.user.findMany({
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -57,7 +57,7 @@ export class AuthRepository {
   }
 
   async count() {
-    return prisma.user.count();
+    return db.user.count();
   }
 }
 

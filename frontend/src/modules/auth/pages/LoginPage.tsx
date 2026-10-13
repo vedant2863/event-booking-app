@@ -13,7 +13,6 @@ export const LoginPage = () => {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>();
   const { setAuth } = useAuthStore();
@@ -29,11 +28,6 @@ export const LoginPage = () => {
       const err = error as { response?: { data?: { message?: string } } };
       toast.error(err.response?.data?.message || 'Login failed. Please check your credentials.');
     }
-  };
-
-  const fillDemo = (email: string) => {
-    setValue('email', email);
-    setValue('password', 'password123');
   };
 
   return (
@@ -66,7 +60,7 @@ export const LoginPage = () => {
               {...register('email', { required: 'Email is required' })}
               type="email"
               className="input"
-              placeholder="user@demo.com"
+              placeholder="name@example.com"
             />
             {errors.email && <p className="text-[#f84464] text-xs mt-1">{errors.email.message}</p>}
           </div>
@@ -99,31 +93,6 @@ export const LoginPage = () => {
             </Link>
           </p>
         </form>
-
-        {/* Quick Demo Login Badges */}
-        <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-4 text-xs space-y-2">
-          <p className="text-gray-300 font-bold">🚀 Quick Demo Logins (Click to autofill):</p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => fillDemo('user@demo.com')}
-              className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-[11px] font-medium transition-colors"
-            >
-              👤 User (user@demo.com)
-            </button>
-            <button
-              onClick={() => fillDemo('organizer@demo.com')}
-              className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-[11px] font-medium transition-colors"
-            >
-              🎭 Organizer (organizer@demo.com)
-            </button>
-            <button
-              onClick={() => fillDemo('admin@demo.com')}
-              className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg text-[11px] font-medium transition-colors"
-            >
-              🛡️ Admin (admin@demo.com)
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );

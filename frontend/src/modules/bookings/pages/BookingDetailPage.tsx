@@ -14,8 +14,9 @@ import {
   Navigation,
   ShieldCheck,
 } from 'lucide-react';
-import { bookingsApi } from '../api/index';
-import { Booking, Event } from '../../shared/types';
+import { bookingsApi } from '../api';
+import { Booking } from '../types/booking.types';
+import { Event } from '../../events/types/event.types';
 import toast from 'react-hot-toast';
 
 export const BookingDetailPage = () => {

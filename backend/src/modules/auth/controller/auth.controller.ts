@@ -4,7 +4,7 @@ import { config } from '../../../shared/config/env';
 import { UnauthorizedError } from '../../../shared/errors/AppError';
 import { AuthenticatedRequest } from '../../../shared/types';
 import ResponseFormatter from '../../../shared/utils/response';
-import { LoginDto, RegisterDto } from '../dto/auth.types';
+import { LoginDto, RegisterDto } from '../types/auth.types';
 import { AuthService } from '../services/auth.service';
 import { loginSchema, registerSchema } from '../validation/auth.validation';
 

@@ -4,7 +4,8 @@ import { format } from 'date-fns';
 import { Ticket, Calendar, MapPin, CheckCircle, XCircle, Clock, QrCode } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { bookingsApi } from '../api';
-import { Booking, Event } from '../../shared/types';
+import { Booking } from '../types/booking.types';
+import { Event } from '../../events/types/event.types';
 import clsx from 'clsx';
 
 const STATUS_CONFIG = {

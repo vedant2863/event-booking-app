@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import clsx from 'clsx';
-import { Seat } from '../../shared/types';
+import { Seat } from '../types/seat.types';
 import { Lock, Armchair, Sparkles } from 'lucide-react';
 
 interface Props {
@@ -8,6 +8,8 @@ interface Props {
   onSelectionChange: (seats: Seat[]) => void;
   maxSelect?: number;
   realtimeUpdates?: { seatId: string; status: string }[];
+  eventName?: string;
+  category?: string;
   cinemaName?: string;
   showtime?: string;
 }
@@ -28,6 +30,8 @@ export const SeatMap = ({
   onSelectionChange,
   maxSelect = 8,
   realtimeUpdates = [],
+  eventName,
+  category = 'movie',
   cinemaName = 'PVR: INORBIT Mall',
   showtime = '08:30 PM (IMAX 3D)',
 }: Props) => {
@@ -90,10 +94,14 @@ export const SeatMap = ({
       {/* Top Auditorium Info Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-800 pb-5">
         <div>
+          {eventName && (
+            <p className="text-sm font-black text-white tracking-tight truncate max-w-sm sm:max-w-md">
+              {eventName}
+            </p>
+          )}
           <span className="text-xs font-bold text-[#f84464] uppercase tracking-wider">
-            Auditorium Seat Layout
+            {cinemaName}
           </span>
-          <h3 className="text-lg font-extrabold text-white">{cinemaName}</h3>
           <p className="text-xs text-gray-400">{showtime}</p>
         </div>
 
@@ -208,18 +216,43 @@ export const SeatMap = ({
         })}
       </div>
 
-      {/* 3. Curved Cinema Screen with Glow (Iconic BookMyShow Screen) */}
+      {/* 3. Stage / Screen Focal Point with Glow */}
       <div className="pt-8 space-y-4 max-w-xl mx-auto text-center">
         <div className="relative">
-          {/* Curved glowing screen line */}
+          {/* Curved glowing screen / stage line */}
           <div className="h-2 w-full bg-gradient-to-r from-transparent via-[#f84464] to-transparent rounded-full cinema-screen-glow" />
           <div className="h-10 w-full bg-gradient-to-b from-[#f84464]/10 to-transparent rounded-t-3xl" />
         </div>
         <div className="flex items-center justify-center gap-2 text-xs font-bold text-gray-400 tracking-widest uppercase">
-          <span>📽️ All eyes this way please!</span>
-          <span className="text-white bg-gray-900 border border-gray-700 px-2 py-0.5 rounded text-[10px]">
-            SCREEN
-          </span>
+          {category === 'music' ? (
+            <>
+              <span>🎤 Main Concert Stage & Artist Ramp</span>
+              <span className="text-white bg-gray-900 border border-[#f84464]/60 px-2 py-0.5 rounded text-[10px] text-[#f84464] font-black">
+                LIVE STAGE
+              </span>
+            </>
+          ) : category === 'sports' ? (
+            <>
+              <span>⚽ Pitch & Center Ground View</span>
+              <span className="text-white bg-gray-900 border border-emerald-500/60 px-2 py-0.5 rounded text-[10px] text-emerald-400 font-black">
+                FIELD
+              </span>
+            </>
+          ) : category === 'theatre' ? (
+            <>
+              <span>🎭 Main Auditorium Stage & Orchestra</span>
+              <span className="text-white bg-gray-900 border border-purple-500/60 px-2 py-0.5 rounded text-[10px] text-purple-400 font-black">
+                STAGE
+              </span>
+            </>
+          ) : (
+            <>
+              <span>📽️ All eyes this way please!</span>
+              <span className="text-white bg-gray-900 border border-gray-700 px-2 py-0.5 rounded text-[10px]">
+                SCREEN
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>

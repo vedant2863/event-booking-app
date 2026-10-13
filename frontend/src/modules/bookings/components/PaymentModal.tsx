@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Booking, Event, Seat } from '../../shared/types';
+import { Booking } from '../types/booking.types';
+import { Event } from '../../events/types/event.types';
+import { Seat } from '../../seats/types/seat.types';
 
 export interface PaymentModalProps {
   isOpen: boolean;

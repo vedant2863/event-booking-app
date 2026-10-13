@@ -16,9 +16,9 @@ import {
   MapPin,
 } from 'lucide-react';
 import { eventsApi } from '../../events/api';
-import { Event } from '../../shared/types';
+import { Event } from '../../events/types/event.types';
 import { EventCard } from '../../events/components/EventCard';
-import { useCityStore } from '../../shared/store/cityStore';
+import { useCityStore } from '../../../shared/store/cityStore';
 
 const HERO_SLIDES = [
   {

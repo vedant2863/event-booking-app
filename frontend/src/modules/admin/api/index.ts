@@ -1,5 +1,9 @@
-import api from '../../shared/api/client';
-import { AdminStats, ApiResponse, Booking, User, Event } from '../../shared/types';
+import api from '../../../shared/api/client';
+import { ApiResponse } from '../../../shared/types';
+import { AdminStats } from '../types/admin.types';
+import { User } from '../../auth/types/auth.types';
+import { Event } from '../../events/types/event.types';
+import { Booking } from '../../bookings/types/booking.types';
 
 // Admin
 export const adminApi = {

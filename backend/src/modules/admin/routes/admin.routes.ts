@@ -12,15 +12,25 @@ const adminController = controller.adminController;
  * Cloud Seed Trigger (Can be called via Browser / Postman / cURL on Vercel)
  * Usage: GET or POST /api/admin/seed?secret=admin_seed_secret
  */
-router.all('/seed', (req, res) => adminController.seed(req, res));
+router.route('/seed')
+  .all((req, res) => adminController.seed(req, res));
 
 // Protected Admin routes
 router.use(authenticate, authorize(UserRole.ADMIN));
 
-router.get('/stats', (req, res, next) => adminController.getStats(req, res, next));
-router.get('/users', (req, res, next) => adminController.getUsers(req, res, next));
-router.patch('/users/:id/role', (req, res, next) => adminController.updateUserRole(req, res, next));
-router.get('/events', (req, res, next) => adminController.getEvents(req, res, next));
-router.get('/bookings', (req, res, next) => adminController.getBookings(req, res, next));
+router.route('/stats')
+  .get((req, res, next) => adminController.getStats(req, res, next));
+
+router.route('/users')
+  .get((req, res, next) => adminController.getUsers(req, res, next));
+
+router.route('/users/:id/role')
+  .patch((req, res, next) => adminController.updateUserRole(req, res, next));
+
+router.route('/events')
+  .get((req, res, next) => adminController.getEvents(req, res, next));
+
+router.route('/bookings')
+  .get((req, res, next) => adminController.getBookings(req, res, next));
 
 export default router;

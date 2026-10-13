@@ -1,21 +1,21 @@
-import { prisma } from '../../../shared/database/prisma';
+import { db } from '../../../shared/database/prisma';
 
 export class NotificationRepository {
   async getBookingWithEvent(bookingId: string) {
-    return prisma.booking.findUnique({
+    return db.booking.findUnique({
       where: { id: bookingId },
       include: { event: true },
     });
   }
 
   async getUserById(userId: string) {
-    return prisma.user.findUnique({
+    return db.user.findUnique({
       where: { id: userId },
     });
   }
 
   async getBookingById(bookingId: string) {
-    return prisma.booking.findUnique({
+    return db.booking.findUnique({
       where: { id: bookingId },
     });
   }

@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { eventsApi } from '../api';
-import { useCityStore, POPULAR_CITIES } from '../../shared/store/cityStore';
+import { useCityStore, POPULAR_CITIES } from '../../../shared/store/cityStore';
 
 interface SectionInput {
   name: string;

@@ -4,7 +4,7 @@ import { config } from '../../../shared/config/env';
 import { ConflictError, UnauthorizedError } from '../../../shared/errors/AppError';
 import { AuthPayload, UserRole } from '../../../shared/types';
 import { generateTokens, tokenVerify } from '../../../shared/utils/token';
-import { AuthTokens, LoginDto, RegisterDto } from '../dto/auth.types';
+import { AuthTokens, LoginDto, RegisterDto } from '../types/auth.types';
 import { AuthRepository } from '../repository/auth.repository';
 
 export interface UserResponse {

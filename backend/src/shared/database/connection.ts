@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger';
 
-import { prisma } from './prisma';
+import { db } from './prisma';
 
 /**
  * PostgreSQL Database Manager via Prisma
@@ -18,7 +18,7 @@ class DatabaseConnection {
         return;
       }
 
-      await prisma.$connect();
+      await db.$connect();
       this.isConnected = true;
       logger.info('PostgreSQL connected successfully via Prisma');
     } catch (error) {
@@ -33,7 +33,7 @@ class DatabaseConnection {
   async disconnect() {
     try {
       if (this.isConnected) {
-        await prisma.$disconnect();
+        await db.$disconnect();
         this.isConnected = false;
         logger.info('PostgreSQL disconnected');
       }

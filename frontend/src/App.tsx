@@ -1,20 +1,22 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { Layout } from './components/layout/Layout';
-import { ProtectedRoute } from './components/auth/ProtectedRoute';
-import { HomePage } from './pages/HomePage';
-import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
-import { EventsPage } from './pages/EventsPage';
-import { EventDetailPage } from './pages/EventDetailPage';
-import { BookingsPage } from './pages/BookingsPage';
-import { BookingDetailPage } from './pages/BookingDetailPage';
-import { CreateEventPage } from './pages/CreateEventPage';
-import { MyEventsPage } from './pages/MyEventsPage';
-import { AdminPage } from './pages/AdminPage';
+import { Layout } from './shared/components/Layout';
+import { ProtectedRoute } from './modules/auth/components/ProtectedRoute';
+import { HomePage } from './modules/home/pages/HomePage';
+import { LoginPage } from './modules/auth/pages/LoginPage';
+import { RegisterPage } from './modules/auth/pages/RegisterPage';
+import { EventsPage } from './modules/events/pages/EventsPage';
+import { EventDetailPage } from './modules/events/pages/EventDetailPage';
+import { BookingsPage } from './modules/bookings/pages/BookingsPage';
+import { BookingDetailPage } from './modules/bookings/pages/BookingDetailPage';
+import { CreateEventPage } from './modules/events/pages/CreateEventPage';
+import { MyEventsPage } from './modules/events/pages/MyEventsPage';
+import { AdminPage } from './modules/admin/pages/AdminPage';
+import { ScrollToTop } from './shared/components/ScrollToTop';
 
 export const App = () => (
   <BrowserRouter>
+    <ScrollToTop />
     <Toaster
       position="top-right"
       toastOptions={{

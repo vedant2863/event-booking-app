@@ -1,1 +1,0 @@
-export { SeatMap } from './SeatMap';

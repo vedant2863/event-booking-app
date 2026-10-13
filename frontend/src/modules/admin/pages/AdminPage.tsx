@@ -4,7 +4,10 @@ import { Users, Calendar, Ticket, TrendingUp, PlusCircle, ExternalLink } from 'l
 import { Link } from 'react-router-dom';
 import { adminApi } from '../api';
 import { eventsApi } from '../../events/api';
-import { AdminStats, Booking, Event, User, UserRole } from '../../shared/types';
+import { AdminStats } from '../types/admin.types';
+import { Booking } from '../../bookings/types/booking.types';
+import { Event } from '../../events/types/event.types';
+import { User, UserRole } from '../../auth/types/auth.types';
 import toast from 'react-hot-toast';
 
 const populatedUser = (ref: string | User | undefined): User | null =>

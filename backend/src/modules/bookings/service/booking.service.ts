@@ -8,11 +8,7 @@ import { notificationService } from '../../notifications/service/notification.se
 import { SeatRepository, seatRepository } from '../../seats/repository/seat.repository';
 import { SeatService } from '../../seats/service/seat.service';
 import { BookingRepository } from '../repository/booking.repository';
-
-export interface CreateBookingDto {
-  eventId: string;
-  seatIds: string[];
-}
+import { CreateBookingDto } from '../types/booking.types';
 
 export class BookingService {
   private eventRepository: EventRepository;

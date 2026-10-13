@@ -1,37 +1,11 @@
 import { Prisma } from '@prisma/client';
 
-import { prisma } from '../../../shared/database/prisma';
-
-export interface CreateBookingData {
-  userId: string;
-  eventId: string;
-  seatDetails: Prisma.InputJsonValue;
-  totalAmount: number;
-  bookingStatus?: string;
-  paymentStatus?: string;
-  bookingReference: string;
-  expiresAt?: Date | null;
-  seats?: string[];
-}
-
-type UserBookingPayload = Prisma.BookingGetPayload<{
-  include: {
-    event: {
-      select: { id: true; title: true; date: true; venue: true; banner: true };
-    };
-  };
-}>;
-
-type AllBookingPayload = Prisma.BookingGetPayload<{
-  include: {
-    user: { select: { id: true; username: true; email: true } };
-    event: { select: { id: true; title: true; date: true } };
-  };
-}>;
+import { db } from '../../../shared/database/prisma';
+import { AllBookingPayload, CreateBookingData, UserBookingPayload } from '../types/booking.types';
 
 export class BookingRepository {
   async create(data: CreateBookingData) {
-    return prisma.booking.create({
+    return db.booking.create({
       data: {
         userId: data.userId,
         eventId: data.eventId,
@@ -58,7 +32,7 @@ export class BookingRepository {
   }
 
   async findById(id: string) {
-    return prisma.booking.findUnique({
+    return db.booking.findUnique({
       where: { id },
       include: {
         event: {
@@ -80,7 +54,7 @@ export class BookingRepository {
   }
 
   async updateById(id: string, update: Prisma.BookingUpdateInput) {
-    return prisma.booking.update({
+    return db.booking.update({
       where: { id },
       data: update,
       include: {
@@ -93,7 +67,7 @@ export class BookingRepository {
 
   async findByUser(userId: string, skip: number, limit: number) {
     const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
+      db.booking.findMany({
         where: { userId },
         skip,
         take: limit,
@@ -104,7 +78,7 @@ export class BookingRepository {
           },
         },
       }),
-      prisma.booking.count({ where: { userId } }),
+      db.booking.count({ where: { userId } }),
     ]);
 
     const formatted = bookings.map((b: UserBookingPayload) => ({
@@ -119,7 +93,7 @@ export class BookingRepository {
   async findAll(page: number, limit: number) {
     const skip = (page - 1) * limit;
     const [bookings, total] = await Promise.all([
-      prisma.booking.findMany({
+      db.booking.findMany({
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -128,7 +102,7 @@ export class BookingRepository {
           event: { select: { id: true, title: true, date: true } },
         },
       }),
-      prisma.booking.count(),
+      db.booking.count(),
     ]);
 
     const formatted = bookings.map((b: AllBookingPayload) => ({
@@ -142,11 +116,11 @@ export class BookingRepository {
   }
 
   async count() {
-    return prisma.booking.count();
+    return db.booking.count();
   }
 
   async getTotalRevenue() {
-    const result = await prisma.booking.aggregate({
+    const result = await db.booking.aggregate({
       where: { paymentStatus: 'completed' },
       _sum: { totalAmount: true },
     });

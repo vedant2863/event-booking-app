@@ -1,5 +1,7 @@
-import api from '../../shared/api/client';
-import { ApiResponse, CreateEventPayload, Event, SeatLayout } from '../../shared/types';
+import api from '../../../shared/api/client';
+import { ApiResponse } from '../../../shared/types';
+import { CreateEventPayload, Event } from '../types/event.types';
+import { SeatLayout } from '../../seats/types/seat.types';
 
 // Events
 export const eventsApi = {

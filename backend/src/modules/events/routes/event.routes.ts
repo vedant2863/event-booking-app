@@ -8,37 +8,38 @@ const router = express.Router();
 const { controller } = dependencies;
 const eventController = controller.eventController;
 
-router.get('/', (req, res, next) => eventController.getEvents(req, res, next));
-router.get('/my', authenticate, (req, res, next) => eventController.getMyEvents(req, res, next));
-router.get('/my-events', authenticate, (req, res, next) =>
-  eventController.getMyEvents(req, res, next)
-);
-router.get('/:id', (req, res, next) => eventController.getEvent(req, res, next));
-router.get('/:id/seats', (req, res, next) => eventController.getEventWithSeats(req, res, next));
+router.route('/')
+  .get((req, res, next) => eventController.getEvents(req, res, next))
+  .post(authenticate, authorize(UserRole.ORGANIZER, UserRole.ADMIN), (req, res, next) =>
+    eventController.createEvent(req, res, next)
+  );
 
-router.post('/', authenticate, authorize(UserRole.ORGANIZER, UserRole.ADMIN), (req, res, next) =>
-  eventController.createEvent(req, res, next)
-);
-router.put('/:id', authenticate, authorize(UserRole.ORGANIZER, UserRole.ADMIN), (req, res, next) =>
-  eventController.updateEvent(req, res, next)
-);
-router.patch(
-  '/:id/publish',
-  authenticate,
-  authorize(UserRole.ORGANIZER, UserRole.ADMIN),
-  (req, res, next) => eventController.publishEvent(req, res, next)
-);
-router.patch(
-  '/:id/cancel',
-  authenticate,
-  authorize(UserRole.ORGANIZER, UserRole.ADMIN),
-  (req, res, next) => eventController.cancelEvent(req, res, next)
-);
-router.delete(
-  '/:id',
-  authenticate,
-  authorize(UserRole.ORGANIZER, UserRole.ADMIN),
-  (req, res, next) => eventController.deleteEvent(req, res, next)
-);
+router.route('/my')
+  .get(authenticate, (req, res, next) => eventController.getMyEvents(req, res, next));
+
+router.route('/my-events')
+  .get(authenticate, (req, res, next) => eventController.getMyEvents(req, res, next));
+
+router.route('/:id')
+  .get((req, res, next) => eventController.getEvent(req, res, next))
+  .put(authenticate, authorize(UserRole.ORGANIZER, UserRole.ADMIN), (req, res, next) =>
+    eventController.updateEvent(req, res, next)
+  )
+  .delete(authenticate, authorize(UserRole.ORGANIZER, UserRole.ADMIN), (req, res, next) =>
+    eventController.deleteEvent(req, res, next)
+  );
+
+router.route('/:id/seats')
+  .get((req, res, next) => eventController.getEventWithSeats(req, res, next));
+
+router.route('/:id/publish')
+  .patch(authenticate, authorize(UserRole.ORGANIZER, UserRole.ADMIN), (req, res, next) =>
+    eventController.publishEvent(req, res, next)
+  );
+
+router.route('/:id/cancel')
+  .patch(authenticate, authorize(UserRole.ORGANIZER, UserRole.ADMIN), (req, res, next) =>
+    eventController.cancelEvent(req, res, next)
+  );
 
 export default router;

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Event } from '../../shared/types';
-import { useCityStore } from '../../shared/store/cityStore';
+import React, { useState, useMemo } from 'react';
+import { format as formatDate } from 'date-fns';
+import { Event } from '../types/event.types';
+import { useCityStore } from '../../../shared/store/cityStore';
 
 export interface ShowtimePickerProps {
   event?: Event | null;
@@ -201,6 +202,7 @@ const CITY_CINEMAS_MAP: Record<string, Cinema[]> = {
 };
 
 export const ShowtimePicker: React.FC<ShowtimePickerProps> = ({
+  event,
   onSelectShowtime,
   selectedCinema,
   selectedTime,
@@ -209,40 +211,128 @@ export const ShowtimePicker: React.FC<ShowtimePickerProps> = ({
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [selectedFormat, setSelectedFormat] = useState('ALL');
 
+  const isLiveEvent = event && event.category !== 'movie';
+
+  // Dynamically compute upcoming dates based on event date or current date
+  const dates = useMemo(() => {
+    const base = event?.date ? new Date(event.date) : new Date();
+    const list = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      list.push({
+        day: i === 0 ? 'TODAY' : i === 1 ? 'TOM' : formatDate(d, 'EEE').toUpperCase(),
+        date: formatDate(d, 'dd MMM').toUpperCase(),
+        fullDate: formatDate(d, 'yyyy-MM-dd'),
+      });
+    }
+    return list;
+  }, [event?.date]);
+
+  const activeDate = dates[selectedDateIndex]?.date || 'Today';
+  const formats = isLiveEvent
+    ? ['ALL', 'LIVE ARENA', 'VIP ACCESS', 'FAN PIT']
+    : FORMATS;
+
   const cityKey = selectedCity?.id?.toLowerCase() || 'mumbai';
-  const cinemas = CITY_CINEMAS_MAP[cityKey] || [
-    {
-      id: `pvr-${cityKey}`,
-      name: `PVR: Central Mall, ${selectedCity?.name || 'City'}`,
-      location: `City Centre, ${selectedCity?.name || 'City'}`,
-      distance: '2.5 km away',
-      amenities: ['M-Ticket', 'Dolby Atmos', 'F&B'],
-      showtimes: [
-        { time: '10:30 AM', format: 'IMAX 3D', price: 550, fillingFast: false },
-        { time: '02:00 PM', format: '3D', price: 450, fillingFast: true },
-        { time: '06:15 PM', format: '3D', price: 500, fillingFast: true },
-        { time: '09:45 PM', format: '2D', price: 250, fillingFast: false },
-      ],
-    },
-    {
-      id: `inox-${cityKey}`,
-      name: `INOX: Mega Mall, ${selectedCity?.name || 'City'}`,
-      location: `Main Boulevard, ${selectedCity?.name || 'City'}`,
-      distance: '5.1 km away',
-      amenities: ['M-Ticket', 'Recliner', 'Food Court'],
-      showtimes: [
-        { time: '11:15 AM', format: '2D', price: 280, fillingFast: false },
-        { time: '03:30 PM', format: '3D', price: 400, fillingFast: false },
-        { time: '07:30 PM', format: '3D', price: 480, fillingFast: true },
-      ],
-    },
-  ];
+
+  const cinemas: Cinema[] = useMemo(() => {
+    const parseVenue = (v: any) => {
+      if (!v) return { name: '', city: '', address: '' };
+      if (typeof v === 'object') return v;
+      try {
+        const parsed = JSON.parse(v);
+        return typeof parsed === 'object' && parsed !== null ? parsed : { name: String(v) };
+      } catch {
+        return { name: String(v) };
+      }
+    };
+
+    const venueObj = parseVenue(event?.venue);
+    const eventId = event?._id || (event as any)?.id || 'primary';
+
+    if (isLiveEvent) {
+      const venueName = venueObj.name || 'Grand Arena Ground';
+      const venueLocation = venueObj.address
+        ? `${venueObj.address}, ${venueObj.city || ''}`
+        : `${venueObj.city || 'Main Arena'}, India`;
+      const eventTime = event?.date
+        ? formatDate(new Date(event.date), 'hh:mm a')
+        : '07:30 PM';
+
+      return [
+        {
+          id: `live-venue-${eventId}`,
+          name: venueName,
+          location: venueLocation,
+          distance: 'Official Main Venue',
+          amenities: [
+            'Direct Entry via M-Ticket',
+            'Live Stage Acoustics',
+            'Dedicated F&B Lounges',
+            'Wheelchair Accessible',
+          ],
+          showtimes: [
+            {
+              time: eventTime,
+              format: 'LIVE ARENA',
+              price: event?.minPrice || 1999,
+              fillingFast: true,
+            },
+            {
+              time: '08:30 PM',
+              format: 'VIP ACCESS',
+              price: event?.maxPrice || 4999,
+              fillingFast: true,
+            },
+          ],
+        },
+      ];
+    }
+
+    // For Movies:
+    const cityCinemas = CITY_CINEMAS_MAP[cityKey] || [
+      {
+        id: `pvr-${cityKey}`,
+        name: `PVR: Central Mall, ${selectedCity?.name || 'City'}`,
+        location: `City Centre, ${selectedCity?.name || 'City'}`,
+        distance: '2.5 km away',
+        amenities: ['M-Ticket', 'Dolby Atmos', 'F&B'],
+        showtimes: [
+          { time: '10:30 AM', format: 'IMAX 3D', price: event?.minPrice || 450, fillingFast: false },
+          { time: '02:00 PM', format: '3D', price: event?.minPrice || 450, fillingFast: true },
+          { time: '06:15 PM', format: '3D', price: event?.maxPrice || 700, fillingFast: true },
+          { time: '09:45 PM', format: '2D', price: Math.max(200, (event?.minPrice || 350) - 100), fillingFast: false },
+        ],
+      },
+    ];
+
+    if (venueObj.name) {
+      const primary: Cinema = {
+        id: `primary-venue-${eventId}`,
+        name: venueObj.name,
+        location: `${venueObj.address || 'Multiplex Complex'}, ${venueObj.city || ''}`,
+        distance: 'Featured Cinema',
+        amenities: ['M-Ticket', 'Dolby Atmos', 'Laser IMAX', 'Wheelchair Access'],
+        showtimes: [
+          { time: '10:30 AM', format: 'IMAX 3D', price: event?.minPrice || 550, fillingFast: false },
+          { time: '01:45 PM', format: 'IMAX 3D', price: event?.minPrice || 550, fillingFast: true },
+          { time: '05:15 PM', format: 'IMAX 3D', price: event?.maxPrice || 800, fillingFast: true },
+          { time: '08:45 PM', format: 'IMAX 3D', price: event?.maxPrice || 800, fillingFast: false },
+          { time: '11:15 PM', format: '2D', price: Math.max(200, (event?.minPrice || 400) - 150), fillingFast: false },
+        ],
+      };
+      return [primary, ...cityCinemas.filter((c) => c.name !== primary.name)];
+    }
+
+    return cityCinemas;
+  }, [isLiveEvent, event, cityKey, selectedCity?.name]);
 
   return (
     <div className="bg-[#1a1f2b] border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
       {/* Date Navigation Strip */}
       <div className="bg-[#151922] border-b border-gray-800 p-4 flex items-center gap-3 overflow-x-auto">
-        {DATES.map((item, idx) => {
+        {dates.map((item, idx) => {
           const isSelected = selectedDateIndex === idx;
           return (
             <button
@@ -263,7 +353,7 @@ export const ShowtimePicker: React.FC<ShowtimePickerProps> = ({
         })}
 
         <div className="ml-auto hidden md:flex items-center gap-2">
-          {FORMATS.map((fmt) => (
+          {formats.map((fmt) => (
             <button
               key={fmt}
               onClick={() => setSelectedFormat(fmt)}
@@ -293,7 +383,7 @@ export const ShowtimePicker: React.FC<ShowtimePickerProps> = ({
         <span className="hidden sm:inline">Cancellation Available with 100% Refund</span>
       </div>
 
-      {/* Cinemas List */}
+      {/* Venues / Cinemas List */}
       <div className="divide-y divide-gray-800/80">
         {cinemas.map((cinema) => {
           const filteredShowtimes =
@@ -338,7 +428,9 @@ export const ShowtimePicker: React.FC<ShowtimePickerProps> = ({
                     return (
                       <button
                         key={i}
-                        onClick={() => onSelectShowtime(cinema.name, st.time, st.format, st.price)}
+                        onClick={() =>
+                          onSelectShowtime(cinema.name, st.time, `${activeDate} • ${st.format}`, st.price)
+                        }
                         className={`group relative flex flex-col items-center justify-center min-w-[96px] py-2 px-3 rounded-xl border transition ${
                           isChosen
                             ? 'bg-[#f84464] border-[#f84464] text-white shadow-lg shadow-[#f84464]/20'

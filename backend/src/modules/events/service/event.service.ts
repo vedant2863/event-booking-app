@@ -3,44 +3,8 @@ import { Event, Prisma, Seat } from '@prisma/client';
 import { ForbiddenError, NotFoundError, ValidationError } from '../../../shared/errors/AppError';
 import { EventCategory, UserRole } from '../../../shared/types';
 import { SeatRepository } from '../../seats/repository/seat.repository';
-import { EventFilter, EventRepository } from '../repository/event.repository';
-
-export interface CreateEventDto {
-  title: string;
-  description: string;
-  venue: {
-    name: string;
-    address: string;
-    city: string;
-    state: string;
-    country: string;
-    capacity: number;
-  };
-  category: EventCategory;
-  date: string;
-  endDate: string;
-  banner?: string;
-  tags?: string[];
-  seatingLayout: {
-    sections: {
-      name: string;
-      rows: string[];
-      seatsPerRow: number;
-      price: number;
-    }[];
-  };
-}
-
-export interface EventQuery {
-  page?: number;
-  limit?: number;
-  category?: EventCategory;
-  city?: string;
-  search?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  sort?: string;
-}
+import { EventRepository } from '../repository/event.repository';
+import { CreateEventDto, EventFilter, EventQuery } from '../types/event.types';
 
 export class EventService {
   private seatRepository: SeatRepository;

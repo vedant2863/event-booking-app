@@ -56,29 +56,19 @@ High-performance, responsive web application for the **BookMyShow clone**, craft
 ```
 frontend/
 ├── src/
-│   ├── modules/
+│   ├── modules/               # Feature-specific modules
 │   │   ├── admin/             # Admin dashboard & management views
-│   │   │   └── pages/         # AdminDashboardPage, AdminUsersPage, etc.
 │   │   ├── auth/              # Authentication module
-│   │   │   ├── pages/         # LoginPage, RegisterPage
-│   │   │   └── store/         # authStore.ts (Zustand + JWT tokens)
 │   │   ├── bookings/          # Checkout & Ticket module
-│   │   │   ├── components/    # PaymentModal.tsx (Hybrid UPI QR / Card)
-│   │   │   └── pages/         # BookingsPage.tsx, BookingDetailPage.tsx (M-Ticket)
 │   │   ├── events/            # Movie & Event catalog module
-│   │   │   ├── api/           # Event API client
-│   │   │   ├── components/    # EventCard.tsx, ShowtimePicker.tsx
-│   │   │   └── pages/         # EventsPage.tsx, EventDetailPage.tsx, CreateEventPage.tsx
 │   │   ├── home/              # Homepage module
-│   │   │   └── pages/         # HomePage.tsx (Carousel, rails, stream spotlight)
 │   │   ├── seats/             # Seating map module
-│   │   │   ├── components/    # SeatMap.tsx (Curved screen, tiers, seat counter)
-│   │   │   └── hooks/         # useSocket.ts (Real-time Socket.IO room listener)
-│   │   └── shared/            # Common layout and shared stores
-│   │       ├── api/           # Axios instance with interceptors & auto-refresh
-│   │       ├── components/    # Navbar.tsx, Layout.tsx, CityModal.tsx
-│   │       ├── store/         # cityStore.ts (Zustand city switcher)
-│   │       └── types/         # TypeScript shared types
+│   │   └── users/             # User profiles & management
+│   ├── shared/                # Common cross-cutting shared code
+│   │   ├── api/               # Axios instance with interceptors & auto-refresh
+│   │   ├── components/        # Navbar.tsx, Layout.tsx, CityModal.tsx
+│   │   ├── store/             # cityStore.ts (Zustand city switcher)
+│   │   └── types/             # TypeScript shared types
 │   ├── styles/
 │   │   └── globals.css        # BookMyShow crimson tokens, animations, seat glows
 │   ├── App.tsx                # App routes & layout wrapper
